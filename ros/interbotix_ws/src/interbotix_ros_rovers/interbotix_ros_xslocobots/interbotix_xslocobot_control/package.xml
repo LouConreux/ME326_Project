@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>interbotix_xslocobot_control</name>
+  <version>0.0.0</version>
+  <description>The interbotix_xslocobot_control package</description>
+  <maintainer email="trsupport@trossenrobotics.com">Luke Schmitt</maintainer>
+  <license>BSD</license>
+  <author email="trsupport@trossenrobotics.com">Solomon Wiznitzer</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>interbotix_xs_sdk</depend>
+  <depend>interbotix_common_modules</depend>
+  <depend>interbotix_xs_modules</depend>
+  <depend>interbotix_xslocobot_descriptions</depend>
+  <depend condition="$INTERBOTIX_XSLOCOBOT_BASE_TYPE == kobuki">kobuki_ros</depend>
+  <depend condition="$INTERBOTIX_XSLOCOBOT_BASE_TYPE == create3">irobot_create_msgs</depend>
+  <depend condition="$INTERBOTIX_XSLOCOBOT_BASE_TYPE == create3">irobot_create_control</depend>
+  <depend condition="$INTERBOTIX_XSLOCOBOT_BASE_TYPE == create3">interbotix_tf_tools</depend>
+  <depend>realsense2_camera</depend>
+  <depend>rplidar_ros</depend>
+  <depend>sllidar_ros2</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

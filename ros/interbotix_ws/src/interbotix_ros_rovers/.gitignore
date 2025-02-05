@@ -1,0 +1,5 @@
+*.pyc
+# Ignore the install, build, and log directories at any level
+**/install/
+**/build/
+**/log/
