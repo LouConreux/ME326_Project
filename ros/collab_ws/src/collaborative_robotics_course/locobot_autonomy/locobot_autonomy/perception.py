@@ -14,14 +14,11 @@ from camera_utils import align_depth
 
 # Import your existing components
 from pipeline_perception import PipelinePerception
-import os
-
-JSON_KEY_PATH = "C:\Users\louis\Desktop\ME326\powerful-hall-449222-h3-6beba59045ba.json" #this is Louis' key, update with your path
+from pnp import get_object_pose
 
 class PerceptionNode(Node):
     def __init__(self):
         super().__init__('perception_node')
-
         self.jason_key_path = JSON_KEY_PATH
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.jason_key_path
         
@@ -234,12 +231,10 @@ class PerceptionNode(Node):
             return
 
         elif self.current_prompt is not None:
-            center_coordinates, object_name = self.perceptor.command_pipeline(self.current_prompt, image_bytes)
-            self.logger.info(f'Object {object_name} found at pixel coordinates: {center_coordinates}')
+            center_coordinates, object_name = self.perceptor.command_pipeline(self.current_prompt, cv_image)
 
         elif self.current_audio is not None:
-            center_coordinates, object_name = self.perceptor.audio_pipeline(self.current_prompt, image_bytes)
-            self.logger.info(f'Object {object_name} found at pixel coordinates: {center_coordinates}')
+            center_coordinates, object_name = self.perceptor.audio_pipeline(self.current_prompt, cv_image)
         return
 
 def main(args=None):
