@@ -1,4 +1,11 @@
 ros/collab_ws/build
 ros/collab_ws/install
 ros/collab_ws/log
+# Ignore all .DS_Store files anywhere in the repository
+.DS_Store
+**/.DS_Store
+
+# Also ignore .DS_Store files in subdirectories
+._.DS_Store
+**/._.DS_Store
 
