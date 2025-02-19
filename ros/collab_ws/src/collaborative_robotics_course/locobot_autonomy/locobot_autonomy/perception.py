@@ -50,14 +50,14 @@ class PerceptionNode(Node):
         self.rgb_sub = self.create_subscription(
             Image,
             '/locobot/camera/color/image_raw',
-            self.image_callback,
-            10)
+            self.rgb_callback,
+            qos_profile_sensor_data)
         
         self.depth_sub = self.create_subscription(
             Image,
             '/locobot/camera/depth/image_raw',
             self.depth_callback,
-            10)
+            qos_profile_sensor_data)
             
         self.rgb_info_sub = self.create_subscription(
             CameraInfo,
@@ -139,7 +139,7 @@ class PerceptionNode(Node):
             self.current_prompt is None or self.rgb_camera_matrix is None or 
             self.depth_camera_matrix is None):
             return
-            
+        
         try:
             # Align depth to RGB
             rgb_intrinsics = (
@@ -181,7 +181,8 @@ class PerceptionNode(Node):
             if center_coords is None:
                 self.get_logger().warn(f'Object {self.current_prompt} not found in image')
                 return
-                
+            else:
+                self.get_logger().info(f'Found object {detected_object} at {center_coords} pixel coordinates')
             # Get depth at object location
             x, y = center_coords
             object_depth = aligned_depth[y, x]
