@@ -47,11 +47,23 @@ class PerceptionNode(Node):
             '/locobot/camera/color/image_raw',
             self.image_callback,
             10)
+        
+        self.depth_sub = self.create_subscription(
+            Image,
+            '/depth_camera/image_raw',
+            self.depth_callback,
+            10)
             
-        self.camera_info_sub = self.create_subscription(
+        self.rgb_info_sub = self.create_subscription(
             CameraInfo,
-            '/camera_info',
-            self.camera_info_callback,
+            'rgb_camera/camera_info',
+            self.rgb_info_callback,
+            10)
+        
+        self.depth_info_sub = self.create_subscription(
+            CameraInfo,
+            'depth_camera/camera_info',
+            self.depth_info_callback,
             10)
         
         self.depth_sub = self.create_subscription(
@@ -132,40 +144,61 @@ class PerceptionNode(Node):
             return
             
         try:
-            # Convert ROS Image message to OpenCV image
-            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            # Align depth to RGB
+            rgb_intrinsics = (
+                self.rgb_camera_matrix[0,0],  # fx
+                self.rgb_camera_matrix[1,1],  # fy
+                self.rgb_camera_matrix[0,2],  # cx
+                self.rgb_camera_matrix[1,2]   # cy
+            )
             
-            # Convert OpenCV image to bytes for vision detector
-            success, img_encoded = cv2.imencode('.jpg', cv_image)
+            depth_intrinsics = (
+                self.depth_camera_matrix[0,0],  # fx
+                self.depth_camera_matrix[1,1],  # fy
+                self.depth_camera_matrix[0,2],  # cx
+                self.depth_camera_matrix[1,2]   # cy
+            )
+            
+            aligned_depth = align_depth(
+                self.latest_depth,
+                depth_intrinsics,
+                self.latest_rgb,
+                rgb_intrinsics,
+                self.cam2cam_transform
+            )
+            
+            # Convert RGB image to bytes for vision detector
+            success, img_encoded = cv2.imencode('.jpg', self.latest_rgb)
             if not success:
                 self.get_logger().error('Failed to encode image')
                 return
                 
             image_bytes = img_encoded.tobytes()
             
-            # Use the pipeline to detect object (note: we skip audio part)
-            center_coords, detected_object = self.pipeline.detector.find_center(image_bytes, self.current_prompt)
+            # Detect object in RGB image
+            center_coords, detected_object = self.pipeline.detector.find_center(
+                image_bytes, 
+                self.current_prompt
+            )
             
             if center_coords is None:
                 self.get_logger().warn(f'Object {self.current_prompt} not found in image')
                 return
                 
-            # Get annotated image with detections (useful for debugging)
-            annotated_image = self.pipeline.detector.annotate_image(image_bytes)
-                
-            # Define 3D model points for PnP
-            # This is an example - adjust based on your known object dimensions
+            # Get depth at object location
+            x, y = center_coords
+            object_depth = aligned_depth[y, x]
+            
+            # Define 3D model points using actual depth
             object_size = 0.1  # 10cm
             object_points_3d = np.array([
-                [0, 0, 0],
-                [object_size, 0, 0],
-                [object_size, object_size, 0],
-                [0, object_size, 0]
+                [0, 0, object_depth],
+                [object_size, 0, object_depth],
+                [object_size, object_size, object_depth],
+                [0, object_size, object_depth]
             ])
             
             # Create 2D points array from center coordinates
-            # This expands the center point to create a bounding box for PnP
-            x, y = center_coords
             box_size = 50  # pixels
             pixel_coords = np.array([
                 [x - box_size/2, y - box_size/2],
@@ -175,51 +208,47 @@ class PerceptionNode(Node):
             ], dtype=np.float32)
             
             # Get object pose using PnP
+            rotation_matrix, translation_vector = get_object_pose(
+                pixel_coords,
+                object_points_3d,
+                self.rgb_camera_matrix,
+                self.rgb_dist_coeffs
+            )
+            
+            # Create and publish pose message
+            pose_msg = PoseStamped()
+            pose_msg.header.frame_id = "rgb_camera_frame"
+            pose_msg.header.stamp = self.get_clock().now().to_msg()
+            
+            pose_msg.pose.position.x = float(translation_vector[0])
+            pose_msg.pose.position.y = float(translation_vector[1])
+            pose_msg.pose.position.z = float(translation_vector[2])
+            
+            # Convert rotation matrix to quaternion
+            from scipy.spatial.transform import Rotation
+            r = Rotation.from_matrix(rotation_matrix)
+            quat = r.as_quat()
+            
+            pose_msg.pose.orientation.x = float(quat[0])
+            pose_msg.pose.orientation.y = float(quat[1])
+            pose_msg.pose.orientation.z = float(quat[2])
+            pose_msg.pose.orientation.w = float(quat[3])
+            
+            # Transform to robot base frame
             try:
-                rotation_matrix, translation_vector = get_object_pose(
-                    pixel_coords,
-                    object_points_3d,
-                    self.camera_matrix,
-                    self.dist_coeffs
+                transform = self.tf_buffer.lookup_transform(
+                    'base_link',
+                    "rgb_camera_frame",
+                    rclpy.time.Time()
                 )
                 
-                # Create PoseStamped message
-                pose_camera = PoseStamped()
-                pose_camera.header.frame_id = msg.header.frame_id
-                pose_camera.header.stamp = self.get_clock().now().to_msg()
+                pose_base = do_transform_pose(pose_msg, transform)
+                self.pose_pub.publish(pose_base)
+                self.get_logger().info(f'Published pose for {detected_object}')
                 
-                # Set position from translation vector
-                pose_camera.pose.position.x = float(translation_vector[0])
-                pose_camera.pose.position.y = float(translation_vector[1])
-                pose_camera.pose.position.z = float(translation_vector[2])
-                
-                # Convert rotation matrix to quaternion
-                from scipy.spatial.transform import Rotation
-                r = Rotation.from_matrix(rotation_matrix)
-                quat = r.as_quat()
-                
-                pose_camera.pose.orientation.x = float(quat[0])
-                pose_camera.pose.orientation.y = float(quat[1])
-                pose_camera.pose.orientation.z = float(quat[2])
-                pose_camera.pose.orientation.w = float(quat[3])
-                
-                # Transform to robot frame
-                try:
-                    transform = self.tf_buffer.lookup_transform(
-                        'base_link',  # target frame
-                        msg.header.frame_id,  # source frame
-                        rclpy.time.Time())
-                    
-                    pose_base = do_transform_pose(pose_camera, transform)
-                    self.pose_pub.publish(pose_base)
-                    self.get_logger().info(f'Published pose for {detected_object}')
-                    
-                except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
-                        tf2_ros.ExtrapolationException) as e:
-                    self.get_logger().error(f'TF2 error: {str(e)}')
-                
-            except RuntimeError as e:
-                self.get_logger().error(f'PnP error: {str(e)}')
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
+                    tf2_ros.ExtrapolationException) as e:
+                self.get_logger().error(f'TF2 error: {str(e)}')
             
         except Exception as e:
             self.get_logger().error(f'Error processing images: {str(e)}')
