@@ -18,7 +18,7 @@ class PipelinePerception:
 
         Parameters:
         - command: The prompt input containing the object to be detected.
-        - image: The image input in which the object should be detected.
+        - image: The image (in bytes) input in which the object should be detected.
 
         Returns:
         - center_coordinates: A tuple representing the (x, y) coordinates of the object's center,
@@ -36,7 +36,7 @@ class PipelinePerception:
 
         Parameters:
         - audio: The audio input to be transcribed into text.
-        - image: The image input in which the object should be detected.
+        - image: The image (in bytes) input in which the object should be detected.
 
         Returns:
         - center_coordinates: A tuple representing the (x, y) coordinates of the object's center,

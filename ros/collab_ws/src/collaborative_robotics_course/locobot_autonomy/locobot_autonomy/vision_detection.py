@@ -4,7 +4,7 @@ from PIL import Image
 from PIL import Image as ImageDraw
 from google.cloud import vision
 
-JSON_KEY_PATH = "../powerful-hall-449222-h3-6beba59045ba.json" #this is Louis' key, update with your path
+JSON_KEY_PATH = "C:\Users\louis\Desktop\ME326\powerful-hall-449222-h3-6beba59045ba.json" #this is Louis' key, update with your path
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = JSON_KEY_PATH
 

@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data, QoSProfile 
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from cv_bridge import CvBridge
 import cv2
 from pipeline_perception import PipelinePerception
+import os
+
+JSON_KEY_PATH = "C:\Users\louis\Desktop\ME326\powerful-hall-449222-h3-6beba59045ba.json" #this is Louis' key, update with your path
 
 class PerceptionNode(Node):
     def __init__(self):
         super().__init__('perception_node')
+
+        self.jason_key_path = JSON_KEY_PATH
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.jason_key_path
         
         # Initialize CV bridge
         self.bridge = CvBridge()
@@ -17,9 +24,9 @@ class PerceptionNode(Node):
         # Create subscribers
         self.image_sub = self.create_subscription(
             Image,
-            '/image',
+            '/locobot/camera/color/image_raw',
             self.image_callback,
-            10)
+            qos_profile=qos_profile_sensor_data)
         
         self.prompt_sub = self.create_subscription(
             String,
@@ -34,7 +41,7 @@ class PerceptionNode(Node):
             10)
             
         # Store the latest prompt
-        self.current_prompt = None
+        self.current_prompt = "Shoe"
 
         # Store the latest audio
         self.current_audio = None
@@ -52,8 +59,9 @@ class PerceptionNode(Node):
         
     def image_callback(self, msg):
         try:
-            # Convert ROS Image message to OpenCV image
-            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            cv_ColorImage = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
+            _, encoded_image = cv2.imencode('.jpg', cv_ColorImage)
+            image_bytes = encoded_image.tobytes()
         except Exception as e:
             self.get_logger().error(f'Error processing image: {str(e)}')
 
@@ -61,10 +69,10 @@ class PerceptionNode(Node):
             return
 
         elif self.current_prompt is not None:
-            center_coordinates, object_name = self.perceptor.command_pipeline(self.current_prompt, cv_image)
+            center_coordinates, object_name = self.perceptor.command_pipeline(self.current_prompt, image_bytes)
 
         elif self.current_audio is not None:
-            center_coordinates, object_name = self.perceptor.audio_pipeline(self.current_prompt, cv_image)
+            center_coordinates, object_name = self.perceptor.audio_pipeline(self.current_prompt, image_bytes)
         return
 
 def main(args=None):
