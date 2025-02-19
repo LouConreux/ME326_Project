@@ -50,12 +50,18 @@ class PerceptionNode(Node):
         self.perceptor = PipelinePerception()
         
     def prompt_callback(self, msg):
-        self.current_prompt = msg.data
-        self.get_logger().info(f'Received prompt: {self.current_prompt}')
+        if msg.data == 'None':
+            self.current_prompt = "Yellow Cube"
+            return
+        else:
+            self.current_prompt = msg.data
+            self.get_logger().info(f'Received prompt: {self.current_prompt}')
+            return
 
     def audio_callback(self, msg):
         # TODO: Find audio topic in LocoBot and set up class attribute audio
         self.current_audio = msg.data
+        return 
         
     def image_callback(self, msg):
         try:
