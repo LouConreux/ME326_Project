@@ -82,7 +82,7 @@ class PerceptionNode(Node):
             10)
             
         # Store the latest prompt
-        self.current_prompt = "Shoe"
+        self.current_prompt = "Yellow Cube"
 
         # Store the latest audio
         self.current_audio = None
@@ -140,9 +140,11 @@ class PerceptionNode(Node):
 
         elif self.current_prompt is not None:
             center_coordinates, object_name = self.perceptor.command_pipeline(self.current_prompt, image_bytes)
+            self.logger.info(f'Object {object_name} found at pixel coordinates: {center_coordinates}')
 
         elif self.current_audio is not None:
             center_coordinates, object_name = self.perceptor.audio_pipeline(self.current_prompt, image_bytes)
+            self.logger.info(f'Object {object_name} found at pixel coordinates: {center_coordinates}')
         return
 
 def main(args=None):
