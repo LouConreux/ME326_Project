@@ -55,39 +55,22 @@ class PerceptionNode(Node):
         
         self.depth_sub = self.create_subscription(
             Image,
-            '/depth_camera/image_raw',
+            '/locobot/camera/depth/image_raw',
             self.depth_callback,
             10)
             
         self.rgb_info_sub = self.create_subscription(
             CameraInfo,
-            'rgb_camera/camera_info',
+            '/locobot/camera/color/camera_info',
             self.rgb_info_callback,
             10)
         
         self.depth_info_sub = self.create_subscription(
             CameraInfo,
-            'depth_camera/camera_info',
+            '/locobot/camera/depth/camera_info',
             self.depth_info_callback,
             10)
         
-        self.depth_sub = self.create_subscription(
-            Image,
-            '/depth_camera/image_raw',
-            self.depth_callback,
-            10)
-            
-        self.rgb_info_sub = self.create_subscription(
-            CameraInfo,
-            'rgb_camera/camera_info',
-            self.rgb_info_callback,
-            10)
-        
-        self.depth_info_sub = self.create_subscription(
-            CameraInfo,
-            'depth_camera/camera_info',
-            self.depth_info_callback,
-            10)
         
         self.prompt_sub = self.create_subscription(
             String,
@@ -266,15 +249,7 @@ class PerceptionNode(Node):
             
         except Exception as e:
             self.get_logger().error(f'Error processing images: {str(e)}')
-
-        if self.current_prompt is None and self.current_audio is None:
-            return
-
-        elif self.current_prompt is not None:
-            center_coordinates, object_name = self.perceptor.command_pipeline(self.current_prompt, cv_image)
-
-        elif self.current_audio is not None:
-            center_coordinates, object_name = self.perceptor.audio_pipeline(self.current_prompt, cv_image)
+        
         return
 
 def main(args=None):
