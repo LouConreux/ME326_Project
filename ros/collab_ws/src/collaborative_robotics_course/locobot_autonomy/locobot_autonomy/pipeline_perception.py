@@ -24,7 +24,7 @@ class PipelinePerception:
         - center_coordinates: A tuple representing the (x, y) coordinates of the object's center,
         or None if the object is not found.
         """
-        object_name = self.gemini.generate_content(command, True)
+        object_name = self.gemini.generate_content(command, False)
         object_name = object_name.strip().lower().replace(" ", "").replace("\n", "").replace("\r", "")
         center_coordinates = self.detector.find_center(image, object_name)
         return center_coordinates, object_name
