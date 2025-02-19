@@ -2,19 +2,24 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data, QoSProfile 
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
 import tf2_ros
+import os
 from tf2_geometry_msgs import do_transform_pose
 from camera_utils import align_depth
+
 
 # Import your existing components
 from pipeline_perception import PipelinePerception
 from pnp import get_object_pose
+
+# Path to JSON key file
+JSON_KEY_PATH = '/path/to/json/key.json'
 
 class PerceptionNode(Node):
     def __init__(self):
@@ -274,7 +279,7 @@ class PerceptionNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = IntegratedPerceptionNode()
+    node = PerceptionNode()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
