@@ -2,10 +2,10 @@ import numpy as np
 import cv2
 from scipy.spatial.transform import Rotation
 
-def get_object_pose(pixel_coords: np.ndarray, 
-                   object_points_3d: np.ndarray,
-                   camera_matrix: np.ndarray,
-                   dist_coeffs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def get_object_pose(pixel_coords,
+                   object_points_3d,
+                   camera_matrix,
+                   dist_coeffs):
     """
     Get object pose in camera frame using PnP
     

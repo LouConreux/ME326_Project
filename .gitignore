@@ -9,3 +9,5 @@ ros/collab_ws/log
 ._.DS_Store
 **/._.DS_Store
 
+# Ignore API key
+loulou_key.json

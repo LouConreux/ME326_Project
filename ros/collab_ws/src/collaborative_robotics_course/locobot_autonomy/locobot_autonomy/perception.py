@@ -19,7 +19,7 @@ from pipeline_perception import PipelinePerception
 from pnp import get_object_pose
 
 # Path to JSON key file
-JSON_KEY_PATH = '/path/to/json/key.json'
+JSON_KEY_PATH = '/home/ubuntu/Desktop/collaborative/loulou_key.json'
 
 class PerceptionNode(Node):
     def __init__(self):
@@ -49,25 +49,29 @@ class PerceptionNode(Node):
         # Create subscribers
         self.rgb_sub = self.create_subscription(
             Image,
-            '/locobot/camera/color/image_raw',
+            '/locobot/camera_frame_sensor/color/image_raw',
+            '/locobot/camera_frame_sensor/color/image_raw',
             self.rgb_callback,
-            qos_profile_sensor_data)
+            10)
         
         self.depth_sub = self.create_subscription(
             Image,
-            '/locobot/camera/depth/image_raw',
+            '/locobot/camera_frame_sensor/depth/image_raw',
+            '/locobot/camera_frame_sensor/depth/image_raw',
             self.depth_callback,
-            qos_profile_sensor_data)
+            10)
             
         self.rgb_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera/color/camera_info',
+            '/locobot/camera_frame_sensor/color/camera_info',
+            '/locobot/camera_frame_sensor/color/camera_info',
             self.rgb_info_callback,
             10)
         
         self.depth_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera/depth/camera_info',
+            '/locobot/camera_frame_sensor/depth/camera_info',
+            '/locobot/camera_frame_sensor/depth/camera_info',
             self.depth_info_callback,
             10)
         
@@ -90,9 +94,7 @@ class PerceptionNode(Node):
         # Store the latest audio
         self.current_audio = None
 
-        # Initialize the perception pipeline
-        self.perceptor = PipelinePerception()
-        
+        # Initialize the perception pipeline        
         self.get_logger().info('Integrated perception node initialized')
         
     def rgb_info_callback(self, msg):
@@ -174,8 +176,8 @@ class PerceptionNode(Node):
             
             # Detect object in RGB image
             center_coords, detected_object = self.pipeline.detector.find_center(
-                image_bytes, 
-                self.current_prompt
+                command=self.current_prompt,
+                image=image_bytes,
             )
             
             if center_coords is None:
