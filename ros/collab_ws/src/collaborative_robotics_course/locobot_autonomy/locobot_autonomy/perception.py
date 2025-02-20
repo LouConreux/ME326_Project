@@ -58,7 +58,6 @@ class PerceptionNode(Node):
             '/locobot/camera_frame_sensor/depth/image_raw',
             self.depth_callback,
             10)
-            10)
             
         self.rgb_info_sub = self.create_subscription(
             CameraInfo,
