@@ -50,27 +50,24 @@ class PerceptionNode(Node):
         self.rgb_sub = self.create_subscription(
             Image,
             '/locobot/camera_frame_sensor/color/image_raw',
-            '/locobot/camera_frame_sensor/color/image_raw',
             self.rgb_callback,
             10)
         
         self.depth_sub = self.create_subscription(
             Image,
             '/locobot/camera_frame_sensor/depth/image_raw',
-            '/locobot/camera_frame_sensor/depth/image_raw',
             self.depth_callback,
+            10)
             10)
             
         self.rgb_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera_frame_sensor/color/camera_info',
             '/locobot/camera_frame_sensor/color/camera_info',
             self.rgb_info_callback,
             10)
         
         self.depth_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera_frame_sensor/depth/camera_info',
             '/locobot/camera_frame_sensor/depth/camera_info',
             self.depth_info_callback,
             10)
