@@ -1,6 +1,10 @@
 import os
 from google.cloud import speech_v1p1beta1 as speech
 
+JSON_KEY_PATH = "/home/ubuntu/Desktop/collaborative/keys/tomtom_key.json"
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = JSON_KEY_PATH
+
 class SpeechTranscriber:
     def __init__(self, language_code='en-US', sample_rate=16000):
         """

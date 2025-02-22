@@ -4,6 +4,10 @@ from PIL import Image
 from PIL import Image as ImageDraw
 from google.cloud import vision
 
+JSON_KEY_PATH = "/home/ubuntu/Desktop/collaborative/keys/tomtom_key.json"
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = JSON_KEY_PATH
+
 class VisionObjectDetector:
     def __init__(self):
         """
@@ -39,9 +43,9 @@ class VisionObjectDetector:
                 center_x = (x_min + x_max) / 2
                 center_y = (y_min + y_max) / 2
 
-                return int(center_x), int(center_y)
+                return int(center_x), int(center_y), obj.name
 
-        return None
+        return None,None
     
     def annotate_image(self, image_bytes):
         """

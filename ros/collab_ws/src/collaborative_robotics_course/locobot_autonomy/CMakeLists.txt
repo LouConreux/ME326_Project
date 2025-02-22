@@ -43,6 +43,8 @@ find_package(Eigen3 REQUIRED)
 find_package(la_msgs REQUIRED)
 
 
+#ament_python_install_package(${PROJECT_NAME})
+
 # Install Python executables
 install(PROGRAMS
   locobot_autonomy/move_A_to_B_py.py
