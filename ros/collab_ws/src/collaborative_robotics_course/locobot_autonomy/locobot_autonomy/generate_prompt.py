@@ -1,6 +1,9 @@
 import os
 import google.generativeai as genai
 
+JSON_KEY_PATH = "/home/ubuntu/Desktop/collaborative/keys/tomtom_key.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = JSON_KEY_PATH
+
 class GeminiClass:
     def __init__(self, prompt=None):
         """

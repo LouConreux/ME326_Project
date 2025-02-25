@@ -13,23 +13,27 @@ import os
 from tf2_geometry_msgs import do_transform_pose
 from camera_utils import align_depth
 
-
 # Import your existing components
 from pipeline_perception import PipelinePerception
 from pnp import get_object_pose
 
 # Path to JSON key file
-JSON_KEY_PATH = '/home/ubuntu/Desktop/collaborative/loulou_key.json'
+JSON_KEY_PATH = '/home/ubuntu/Desktop/collaborative/keys/tomtom_key.json'
 
 class PerceptionNode(Node):
     def __init__(self):
         super().__init__('perception_node')
+        self.get_logger().info('Starting perception node initialization...')
+        
         self.jason_key_path = JSON_KEY_PATH
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.jason_key_path
+        self.get_logger().info(f'Set Google credentials path to: {self.jason_key_path}')
         
         # Initialize perception pipeline
+        self.get_logger().info('Initializing perception pipeline...')
         self.pipeline = PipelinePerception()
         self.bridge = CvBridge()
+        self.get_logger().info('Perception pipeline initialized')
         
         # Initialize camera info
         self.rgb_camera_matrix = None
@@ -43,10 +47,13 @@ class PerceptionNode(Node):
         self.cam2cam_transform = np.eye(4) ### to change
         
         # TF2 Buffer for coordinate transformations
+        self.get_logger().info('Setting up TF2 buffer...')
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+        self.get_logger().info('TF2 buffer setup complete')
         
         # Create subscribers
+        self.get_logger().info('Creating subscribers...')
         self.rgb_sub = self.create_subscription(
             Image,
             '/locobot/camera_frame_sensor/image_raw',
@@ -58,6 +65,12 @@ class PerceptionNode(Node):
             '/locobot/camera_frame_sensor/image_raw',
             self.depth_callback,
             10)
+            
+        self.rgb_info_sub = self.create_subscription(
+            CameraInfo,
+            '/locobot/camera_frame_sensor/camera_info',
+            self.rgb_info_callback,
+            10)
         
         
         self.prompt_sub = self.create_subscription(
@@ -65,21 +78,24 @@ class PerceptionNode(Node):
             '/user_prompt',
             self.prompt_callback,
             10)
+        self.get_logger().info('All subscribers created')
             
         # Create publisher for object pose
+        self.get_logger().info('Creating publishers...')
         self.pose_pub = self.create_publisher(
             PoseStamped,
             '/detected_object_pose',
             10)
+        self.get_logger().info('Publishers created')
             
         # Store the latest prompt
-        self.current_prompt = "Yellow Cube"
-
-        # Store the latest audio
+        self.current_prompt = "Blue Cube"
         self.current_audio = None
 
-        # Initialize the perception pipeline        
-        self.get_logger().info('Integrated perception node initialized')
+        # Initialize the perception pipeline
+        self.perceptor = PipelinePerception()
+        
+        self.get_logger().info('Perception node initialization complete')
         
     def rgb_info_callback(self, msg):
         """Process RGB camera calibration data"""
@@ -97,38 +113,58 @@ class PerceptionNode(Node):
         
     def rgb_callback(self, msg):
         """Store latest RGB image"""
-        self.latest_rgb = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-        self.get_logger().info('Received RGB image')
-        self.process_images()
-        self.get_logger().info('Processed RGB image')
+        self.get_logger().debug('Received RGB image')
+        try:
+            self.latest_rgb = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            cv2.imwrite('latest_rgb.jpg', self.latest_rgb)
+            self.get_logger().info('Saved latest RGB image to latest_rgb.jpg')
 
+            self.process_images()
+        except Exception as e:
+            self.get_logger().error(f'Error in RGB callback: {str(e)}')
+        
     def depth_callback(self, msg):
         """Store latest depth image"""
-        self.latest_depth = self.bridge.imgmsg_to_cv2(msg, "16UC1")
-        self.process_images()
+        self.get_logger().debug('Received depth image')
+        try:
+            self.latest_depth = self.bridge.imgmsg_to_cv2(msg, "16UC1")
+            self.process_images()
+        except Exception as e:
+            self.get_logger().error(f'Error in depth callback: {str(e)}')
         
     def prompt_callback(self, msg):
+        self.get_logger().info(f'Received prompt message: {msg.data}')
         if msg.data == 'None':
-            self.current_prompt = "Yellow Cube"
+            self.current_prompt = "Blue Cube"
             return
         else:
             self.current_prompt = msg.data
-            self.get_logger().info(f'Received prompt: {self.current_prompt}')
+            self.get_logger().info(f'Set current prompt to: {self.current_prompt}')
             return
-
-    def audio_callback(self, msg):
-        # TODO: Find audio topic in LocoBot and set up class attribute audio
-        self.current_audio = msg.data
-        return 
         
     def process_images(self):
         """Process RGB and depth images when both are available"""
-        if (self.latest_rgb is None or self.latest_depth is None or 
-            self.current_prompt is None or self.rgb_camera_matrix is None or 
-            self.depth_camera_matrix is None):
+        self.get_logger().debug('Starting image processing')
+        
+        # Check if we have all required data
+        if self.latest_rgb is None:
+            self.get_logger().debug('RGB image not available')
+            return
+        if self.latest_depth is None:
+            self.get_logger().debug('Depth image not available')
+            return
+        if self.current_prompt is None:
+            self.get_logger().debug('Prompt not available')
+            return
+        if self.rgb_camera_matrix is None:
+            self.get_logger().debug('RGB camera matrix not available')
+            return
+        if self.depth_camera_matrix is None:
+            self.get_logger().debug('Depth camera matrix not available')
             return
         
         try:
+            self.get_logger().debug('Aligning depth to RGB...')
             # Align depth to RGB
             rgb_intrinsics = (
                 self.rgb_camera_matrix[0,0],  # fx
@@ -151,16 +187,20 @@ class PerceptionNode(Node):
                 rgb_intrinsics,
                 self.cam2cam_transform
             )
+            self.get_logger().debug('Depth alignment complete')
             
             # Convert RGB image to bytes for vision detector
+            self.get_logger().debug('Converting RGB image to bytes...')
             success, img_encoded = cv2.imencode('.jpg', self.latest_rgb)
             if not success:
                 self.get_logger().error('Failed to encode image')
                 return
                 
             image_bytes = img_encoded.tobytes()
+            self.get_logger().debug('Image conversion complete')
             
             # Detect object in RGB image
+            self.get_logger().debug(f'Detecting object: {self.current_prompt}')
             center_coords, detected_object = self.pipeline.detector.find_center(
                 command=self.current_prompt,
                 image=image_bytes,
@@ -171,27 +211,14 @@ class PerceptionNode(Node):
                 return
             else:
                 self.get_logger().info(f'Found object {detected_object} at {center_coords} pixel coordinates')
+            
             # Get depth at object location
             x, y = center_coords
             object_depth = aligned_depth[y, x]
+            self.get_logger().debug(f'Object depth: {object_depth}')
             
-            # Define 3D model points using actual depth
-            object_size = 0.1  # 10cm
-            object_points_3d = np.array([
-                [0, 0, object_depth],
-                [object_size, 0, object_depth],
-                [object_size, object_size, object_depth],
-                [0, object_size, object_depth]
-            ])
-            
-            # Create 2D points array from center coordinates
-            box_size = 50  # pixels
-            pixel_coords = np.array([
-                [x - box_size/2, y - box_size/2],
-                [x + box_size/2, y - box_size/2],
-                [x + box_size/2, y + box_size/2],
-                [x - box_size/2, y + box_size/2]
-            ], dtype=np.float32)
+            # Rest of the processing...
+            self.get_logger().debug('Computing object pose...')
             
             # Get object pose using PnP
             rotation_matrix, translation_vector = get_object_pose(
@@ -200,27 +227,10 @@ class PerceptionNode(Node):
                 self.rgb_camera_matrix,
                 self.rgb_dist_coeffs
             )
+            self.get_logger().debug('Object pose computed')
             
             # Create and publish pose message
-            pose_msg = PoseStamped()
-            pose_msg.header.frame_id = "rgb_camera_frame"
-            pose_msg.header.stamp = self.get_clock().now().to_msg()
-            
-            pose_msg.pose.position.x = float(translation_vector[0])
-            pose_msg.pose.position.y = float(translation_vector[1])
-            pose_msg.pose.position.z = float(translation_vector[2])
-            
-            # Convert rotation matrix to quaternion
-            from scipy.spatial.transform import Rotation
-            r = Rotation.from_matrix(rotation_matrix)
-            quat = r.as_quat()
-            
-            pose_msg.pose.orientation.x = float(quat[0])
-            pose_msg.pose.orientation.y = float(quat[1])
-            pose_msg.pose.orientation.z = float(quat[2])
-            pose_msg.pose.orientation.w = float(quat[3])
-            
-            # Transform to robot base frame
+            self.get_logger().debug('Publishing pose...')
             try:
                 transform = self.tf_buffer.lookup_transform(
                     'base_link',
@@ -238,15 +248,25 @@ class PerceptionNode(Node):
             
         except Exception as e:
             self.get_logger().error(f'Error processing images: {str(e)}')
+            import traceback
+            self.get_logger().error(traceback.format_exc())
         
         return
 
 def main(args=None):
     rclpy.init(args=args)
-    node = PerceptionNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        node = PerceptionNode()
+        node.get_logger().info('Starting node spin...')
+        rclpy.spin(node)
+    except Exception as e:
+        print(f'Error in main: {str(e)}')
+        import traceback
+        print(traceback.format_exc())
+    finally:
+        if 'node' in locals():
+            node.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
