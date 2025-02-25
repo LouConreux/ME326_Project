@@ -98,8 +98,10 @@ class PerceptionNode(Node):
     def rgb_callback(self, msg):
         """Store latest RGB image"""
         self.latest_rgb = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        self.get_logger().info('Received RGB image')
         self.process_images()
-        
+        self.get_logger().info('Processed RGB image')
+
     def depth_callback(self, msg):
         """Store latest depth image"""
         self.latest_depth = self.bridge.imgmsg_to_cv2(msg, "16UC1")
