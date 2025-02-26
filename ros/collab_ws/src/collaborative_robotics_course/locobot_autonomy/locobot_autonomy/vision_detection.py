@@ -71,3 +71,45 @@ class VisionObjectDetector:
             draw.polygon(vertices, outline='red')
 
         return pil_image
+    
+    def get_colored_objects(self, image_bytes):
+        """
+        Detects colored objects in the image
+
+        :param image_bytes: The raw bytes of the image.
+        :return: A list of detected objects with their associated color.
+        """
+        colored_objects = {}
+        object_counts = {}
+
+        image = vision.Image(content=image_bytes)
+
+        response = self.client.object_localization(image=image)
+
+        objects = response.localized_object_annotations
+
+        pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        width, height = pil_image.size
+
+        for obj in objects:
+            vertices = obj.bounding_poly.normalized_vertices
+
+            x_min = vertices[0].x * width
+            y_min = vertices[0].y * height
+            x_max = vertices[2].x * width
+            y_max = vertices[2].y * height
+
+            center_x = (x_min + x_max) / 2
+            center_y = (y_min + y_max) / 2
+
+            color = pil_image.getpixel((int(center_x), int(center_y)))
+            color = tuple(color)
+            base_name = obj.name
+            if base_name in object_counts:
+                object_counts[base_name] += 1
+            else:
+                object_counts[base_name] = 1
+            unique_name = f"{base_name}_{object_counts[base_name]}"
+
+        colored_objects[unique_name] = color
+        return colored_objects

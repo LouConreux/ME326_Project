@@ -18,7 +18,7 @@ from pipeline_perception import PipelinePerception
 from pnp import get_object_pose
 
 # Path to JSON key file
-JSON_KEY_PATH = '/home/ubuntu/Desktop/collaborative/keys/tomtom_key.json'
+JSON_KEY_PATH = '/home/ubuntu/Desktop/collaborative/loulou_key.json'
 
 class PerceptionNode(Node):
     def __init__(self):
@@ -56,22 +56,27 @@ class PerceptionNode(Node):
         self.get_logger().info('Creating subscribers...')
         self.rgb_sub = self.create_subscription(
             Image,
-            '/locobot/camera_frame_sensor/image_raw',
+            '/locobot/camera/image_raw',
             self.rgb_callback,
             10)
         
         self.depth_sub = self.create_subscription(
             Image,
-            '/locobot/camera_frame_sensor/image_raw',
+            '/locobot/camera/depth/image_raw',
             self.depth_callback,
             10)
             
         self.rgb_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera_frame_sensor/camera_info',
+            '/locobot/camera/camera_info',
             self.rgb_info_callback,
             10)
         
+        self.depth_info_sub = self.create_subscription(
+            CameraInfo,
+            '/locobot/camera/depth/camera_info',
+            self.depth_info_callback,
+            10)
         
         self.prompt_sub = self.create_subscription(
             String,
@@ -89,8 +94,9 @@ class PerceptionNode(Node):
         self.get_logger().info('Publishers created')
             
         # Store the latest prompt
-        self.current_prompt = "Blue Cube"
+        self.current_prompt = "Blue Object"
         self.current_audio = None
+        self.get_logger().info(f'Prompt initialized to: {self.current_prompt}')
 
         # Initialize the perception pipeline
         self.perceptor = PipelinePerception()
@@ -135,7 +141,7 @@ class PerceptionNode(Node):
     def prompt_callback(self, msg):
         self.get_logger().info(f'Received prompt message: {msg.data}')
         if msg.data == 'None':
-            self.current_prompt = "Blue Cube"
+            self.current_prompt = "Blue Object"
             return
         else:
             self.current_prompt = msg.data
@@ -144,27 +150,22 @@ class PerceptionNode(Node):
         
     def process_images(self):
         """Process RGB and depth images when both are available"""
-        self.get_logger().debug('Starting image processing')
+        self.get_logger().info('Starting image processing')
         
         # Check if we have all required data
         if self.latest_rgb is None:
-            self.get_logger().debug('RGB image not available')
-            return
+            self.get_logger().info('RGB image not available')
         if self.latest_depth is None:
-            self.get_logger().debug('Depth image not available')
-            return
+            self.get_logger().info('Depth image not available')
         if self.current_prompt is None:
-            self.get_logger().debug('Prompt not available')
-            return
+            self.get_logger().info('Prompt not available')
         if self.rgb_camera_matrix is None:
-            self.get_logger().debug('RGB camera matrix not available')
-            return
+            self.get_logger().info('RGB camera matrix not available')
         if self.depth_camera_matrix is None:
-            self.get_logger().debug('Depth camera matrix not available')
-            return
+            self.get_logger().info('Depth camera matrix not available')
         
         try:
-            self.get_logger().debug('Aligning depth to RGB...')
+            self.get_logger().info('Aligning depth to RGB...')
             # Align depth to RGB
             rgb_intrinsics = (
                 self.rgb_camera_matrix[0,0],  # fx
@@ -187,10 +188,10 @@ class PerceptionNode(Node):
                 rgb_intrinsics,
                 self.cam2cam_transform
             )
-            self.get_logger().debug('Depth alignment complete')
+            self.get_logger().info('Depth alignment complete')
             
             # Convert RGB image to bytes for vision detector
-            self.get_logger().debug('Converting RGB image to bytes...')
+            self.get_logger().info('Converting RGB image to bytes...')
             success, img_encoded = cv2.imencode('.jpg', self.latest_rgb)
             if not success:
                 self.get_logger().error('Failed to encode image')
@@ -199,15 +200,21 @@ class PerceptionNode(Node):
             image_bytes = img_encoded.tobytes()
             self.get_logger().debug('Image conversion complete')
             
+            # Rank detected object by color
+            self.get_logger().info('Ranking detected object by color...')
+            colored_objects = self.pipeline.color_ranking(image_bytes)
+            self.get_logger().info('Color ranking complete')
+            self.get_logger().info(f'Colored objects from UV to IR: {colored_objects}')
+
             # Detect object in RGB image
-            self.get_logger().debug(f'Detecting object: {self.current_prompt}')
+            self.get_logger().info(f'Detecting object: {self.current_prompt}')
             center_coords, detected_object = self.pipeline.detector.find_center(
-                command=self.current_prompt,
-                image=image_bytes,
+                image_bytes=image_bytes,
+                object_name=self.current_prompt,
             )
-            
+
             if center_coords is None:
-                self.get_logger().warn(f'Object {self.current_prompt} not found in image')
+                self.get_logger().info(f'Object {self.current_prompt} not found in image')
                 return
             else:
                 self.get_logger().info(f'Found object {detected_object} at {center_coords} pixel coordinates')
@@ -215,10 +222,10 @@ class PerceptionNode(Node):
             # Get depth at object location
             x, y = center_coords
             object_depth = aligned_depth[y, x]
-            self.get_logger().debug(f'Object depth: {object_depth}')
+            self.get_logger().info(f'Object depth: {object_depth}')
             
             # Rest of the processing...
-            self.get_logger().debug('Computing object pose...')
+            self.get_logger().info('Computing object pose...')
             
             # Get object pose using PnP
             rotation_matrix, translation_vector = get_object_pose(
@@ -227,10 +234,10 @@ class PerceptionNode(Node):
                 self.rgb_camera_matrix,
                 self.rgb_dist_coeffs
             )
-            self.get_logger().debug('Object pose computed')
+            self.get_logger().info('Object pose computed')
             
             # Create and publish pose message
-            self.get_logger().debug('Publishing pose...')
+            self.get_logger().info('Publishing pose...')
             try:
                 transform = self.tf_buffer.lookup_transform(
                     'base_link',
