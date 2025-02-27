@@ -1,8 +1,10 @@
 import os
 import io
+import numpy as np
 from PIL import Image
 from PIL import Image as ImageDraw
 from google.cloud import vision
+import colorsys
 
 JSON_KEY_PATH = "/home/ubuntu/Desktop/collaborative/keys/tomtom_key.json"
 
@@ -32,7 +34,8 @@ class VisionObjectDetector:
         objects = response.localized_object_annotations
 
         for obj in objects:
-            if obj.name.lower() == object_name.lower():
+            print(f"Found object: {obj.name}")
+            if obj.name.lower() in object_name.lower():
                 vertices = obj.bounding_poly.normalized_vertices
 
                 x_min = vertices[0].x * width
@@ -79,8 +82,7 @@ class VisionObjectDetector:
         :param image_bytes: The raw bytes of the image.
         :return: A list of detected objects with their associated color.
         """
-        colored_objects = {}
-        object_counts = {}
+        colored_objects = []
 
         image = vision.Image(content=image_bytes)
 
@@ -90,6 +92,7 @@ class VisionObjectDetector:
 
         pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         width, height = pil_image.size
+        image_np = np.array(pil_image)
 
         for obj in objects:
             vertices = obj.bounding_poly.normalized_vertices
@@ -101,15 +104,20 @@ class VisionObjectDetector:
 
             center_x = (x_min + x_max) / 2
             center_y = (y_min + y_max) / 2
+            
+            cropped_region = image_np[y_min:y_max, x_min:x_max]
 
-            color = pil_image.getpixel((int(center_x), int(center_y)))
-            color = tuple(color)
-            base_name = obj.name
-            if base_name in object_counts:
-                object_counts[base_name] += 1
-            else:
-                object_counts[base_name] = 1
-            unique_name = f"{base_name}_{object_counts[base_name]}"
+            avg_color = np.mean(cropped_region, axis=(0, 1)).astype(int)  # (R, G, B)
+            avg_color_tuple = tuple(avg_color)
 
-        colored_objects[unique_name] = color
+            avg_color_norm = tuple(c / 255.0 for c in avg_color)
+            hue, sat, val = colorsys.rgb_to_hsv(*avg_color_norm)
+            hue_deg = hue * 360 
+
+            colored_objects.append({
+                "name": obj.name,
+                "bounding_box": (x_min, y_min, x_max, y_max),
+                "color": avg_color_tuple,
+                "hue": hue_deg
+            })
         return colored_objects

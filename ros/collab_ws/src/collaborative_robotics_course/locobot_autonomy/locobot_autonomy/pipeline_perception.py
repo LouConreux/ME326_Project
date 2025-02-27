@@ -55,13 +55,11 @@ class PipelinePerception:
 
         Parameters:
         - image: The image (in bytes) input in which the object should be detected.
-        - object_name: The name of the object to be detected.
 
         Returns:
         - color_ranking: A list of tuples representing the color ranking of the object.
         """
         colored_objects = self.detector.get_colored_objects(image)
-        color_ranking_str = self.gemini.generate_from_image(image, f"In the given image, identify the colors of the detected objects, then rank the detected objects based on their color following the visible light spectrum, so first purple or blue objects and finish by the more red ones. Return the text result as a list of color-ranked objects separated by a coma only. Here are the detected objects: {colored_objects.keys()} that you need to rank")
-        color_ranking = color_ranking_str.split(",")
-        return color_ranking
+        sorted_objects = sorted(colored_objects, key=lambda obj: (obj["hue"] if obj["hue"] >= 250 else obj["hue"] + 360))
+        return sorted_objects
     

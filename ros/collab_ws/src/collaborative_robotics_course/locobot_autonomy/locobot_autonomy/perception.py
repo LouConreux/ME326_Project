@@ -199,12 +199,6 @@ class PerceptionNode(Node):
                 
             image_bytes = img_encoded.tobytes()
             self.get_logger().debug('Image conversion complete')
-            
-            # Rank detected object by color
-            self.get_logger().info('Ranking detected object by color...')
-            colored_objects = self.pipeline.color_ranking(image_bytes)
-            self.get_logger().info('Color ranking complete')
-            self.get_logger().info(f'Colored objects from UV to IR: {colored_objects}')
 
             # Detect object in RGB image
             self.get_logger().info(f'Detecting object: {self.current_prompt}')
@@ -219,6 +213,16 @@ class PerceptionNode(Node):
             else:
                 self.get_logger().info(f'Found object {detected_object} at {center_coords} pixel coordinates')
             
+            # Rank colors of detected object
+            self.get_logger().info('Ranking colors of detected object...')
+            sorted_color_objects = self.pipeline.color_ranking(image_bytes)
+            if sorted_color_objects is None:
+                self.get_logger().info('No colored objects detected')
+                return
+            else:
+                sorted_color_objname = [obj["name"] for obj in sorted_color_objects]
+                self.get_logger().info(f'Color ranking: {sorted_color_objname}')
+
             # Get depth at object location
             x, y = center_coords
 
