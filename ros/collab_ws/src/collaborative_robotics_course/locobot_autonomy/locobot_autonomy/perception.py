@@ -18,7 +18,7 @@ from pipeline_perception import PipelinePerception
 from pnp import get_object_pose
 
 # Path to JSON key file
-JSON_KEY_PATH = '/home/ubuntu/Desktop/collaborative/loulou_key.json'
+JSON_KEY_PATH = '/home/ubuntu/Desktop/collaborative/keys/tomtom_key.json'
 
 class PerceptionNode(Node):
     def __init__(self):
@@ -56,25 +56,25 @@ class PerceptionNode(Node):
         self.get_logger().info('Creating subscribers...')
         self.rgb_sub = self.create_subscription(
             Image,
-            '/locobot/camera/image_raw',
+            '/locobot/camera_frame_sensor/image_raw',
             self.rgb_callback,
             10)
         
         self.depth_sub = self.create_subscription(
             Image,
-            '/locobot/camera/depth/image_raw',
+            '/locobot/camera_frame_sensor/depth/image_raw',
             self.depth_callback,
             10)
             
         self.rgb_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera/camera_info',
+            '/locobot/camera_frame_sensor/camera_info',
             self.rgb_info_callback,
             10)
         
         self.depth_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera/depth/camera_info',
+            '/locobot/camera_frame_sensor/depth/camera_info',
             self.depth_info_callback,
             10)
         
@@ -221,33 +221,55 @@ class PerceptionNode(Node):
             
             # Get depth at object location
             x, y = center_coords
-            object_depth = aligned_depth[y, x]
-            self.get_logger().info(f'Object depth: {object_depth}')
+
+            #make sure coordinates are within image bounds
+            h,w = aligned_depth.shape[:2]
+            x = max(0, min(w-1, x))
+            y = max(0, min(h-1, y))
+
+            object_center_depth = float(aligned_depth[y, x])/1000.0
+            if object_center_depth <= 0 or np.isnan(object_center_depth):
+                self.get_logger().warn(f'Invalid depth at object center: {object_center_depth}')
+                return
+            self.get_logger().info(f'Object depth at center: {object_center_depth} meters')
+
+            pose_msg = PoseStamped()
+            pose_msg.header.frame_id = 'rgb_camera_frame'
+            pose_msg.header.stamp = self.get_clock().now().to_msg()
+
+            # Calculate 3D position using pinhole camera model
+            fx = self.rgb_camera_matrix[0, 0]
+            fy = self.rgb_camera_matrix[1, 1]
+            cx = self.rgb_camera_matrix[0, 2]
+            cy = self.rgb_camera_matrix[1, 2]
             
-            # Rest of the processing...
-            self.get_logger().info('Computing object pose...')
+            # Convert from pixel coordinates to 3D coordinates in camera frame
+            X = (x - cx) * object_center_depth / fx
+            Y = (y - cy) * object_center_depth / fy
+            Z = object_center_depth
             
-            # Get object pose using PnP
-            rotation_matrix, translation_vector = get_object_pose(
-                pixel_coords,
-                object_points_3d,
-                self.rgb_camera_matrix,
-                self.rgb_dist_coeffs
-            )
-            self.get_logger().info('Object pose computed')
+            pose_msg.pose.position.x = float(X)
+            pose_msg.pose.position.y = float(Y)
+            pose_msg.pose.position.z = float(Z)
             
+            # Set a default orientation (facing the camera)
+            pose_msg.pose.orientation.w = 1.0
+            pose_msg.pose.orientation.x = 0.0
+            pose_msg.pose.orientation.y = 0.0
+            pose_msg.pose.orientation.z = 0.0
+
             # Create and publish pose message
-            self.get_logger().info('Publishing pose...')
+            self.get_logger().info('Publishing object position...')
             try:
                 transform = self.tf_buffer.lookup_transform(
                     'base_link',
-                    "rgb_camera_frame",
+                    pose_msg.header.frame_id,
                     rclpy.time.Time()
                 )
                 
                 pose_base = do_transform_pose(pose_msg, transform)
                 self.pose_pub.publish(pose_base)
-                self.get_logger().info(f'Published pose for {detected_object}')
+                self.get_logger().info(f'Published position for {detected_object} at depth {object_center_depth}m')
                 
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
                     tf2_ros.ExtrapolationException) as e:
