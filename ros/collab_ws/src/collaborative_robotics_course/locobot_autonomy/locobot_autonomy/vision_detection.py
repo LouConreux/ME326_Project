@@ -46,9 +46,9 @@ class VisionObjectDetector:
                 center_x = (x_min + x_max) / 2
                 center_y = (y_min + y_max) / 2
 
-                return int(center_x), int(center_y), obj.name
+                return int(center_x), int(center_y)
 
-        return None,None
+        return None, None
     
     def annotate_image(self, image_bytes):
         """
@@ -97,10 +97,10 @@ class VisionObjectDetector:
         for obj in objects:
             vertices = obj.bounding_poly.normalized_vertices
 
-            x_min = vertices[0].x * width
-            y_min = vertices[0].y * height
-            x_max = vertices[2].x * width
-            y_max = vertices[2].y * height
+            x_min = int(vertices[0].x * width)
+            y_min = int(vertices[0].y * height)
+            x_max = int(vertices[2].x * width)
+            y_max = int(vertices[2].y * height)
 
             center_x = (x_min + x_max) / 2
             center_y = (y_min + y_max) / 2
