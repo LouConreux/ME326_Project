@@ -46,9 +46,9 @@ class VisionObjectDetector:
                 center_x = (x_min + x_max) / 2
                 center_y = (y_min + y_max) / 2
 
-                return int(center_x), int(center_y), obj.name
+                return int(center_x), int(center_y)
 
-        return None,None
+        return None, None
     
     def annotate_image(self, image_bytes):
         """
