@@ -27,13 +27,12 @@ class SpeechProcessorNode(Node):
         
         # Initialize paths
         # You may need to adjust these paths for your system
-        self.json_key_path = "/home/locobot/Group1/ME326_Project/loulou_key.json"
+        self.json_key_path = "/home/locobot/Desktop/ME326_Project/loulou_key.json"
         self.audio_filename = "recorded_audio.wav"
         
         # Check if credentials file exists
         if os.path.exists(self.json_key_path):
             self.get_logger().info(f"Found credentials at {self.json_key_path}")
-            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.json_key_path
         else:
             self.get_logger().error(f"Credentials not found at {self.json_key_path}")
             # We'll continue, but speech recognition will likely fail

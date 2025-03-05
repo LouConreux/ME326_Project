@@ -2,8 +2,7 @@ import os
 import re
 from google.cloud import speech_v1p1beta1 as speech
 
-#JSON_KEY_PATH = "/home/ubuntu/Desktop/collaborative/keys/tomtom_key.json"
-JSON_KEY_PATH = "/Users/tom/Desktop/Stanford/Cours/Winter2025/ME326/keys/tomtom_key.json"
+JSON_KEY_PATH = '/home/locobot/Desktop/ME326_Project/loulou_key.json'
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = JSON_KEY_PATH
 
 class SpeechTranscriber:

@@ -18,7 +18,7 @@ from pipeline_perception import PipelinePerception
 from pnp import get_object_pose
 
 # Path to JSON key file
-JSON_KEY_PATH = '/home/locobot/Group1/ME326_Project/loulou_key.json'
+JSON_KEY_PATH = '/home/locobot/Desktop/ME326_Project/loulou_key.json'
 
 class PerceptionNode(Node):
     def __init__(self):
@@ -80,7 +80,7 @@ class PerceptionNode(Node):
         
         self.prompt_sub = self.create_subscription(
             String,
-            '/user_prompt',
+            '/speech/target_object',
             self.prompt_callback,
             10)
         self.get_logger().info('All subscribers created')
