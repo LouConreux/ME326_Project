@@ -18,16 +18,16 @@ from pipeline_perception import PipelinePerception
 from pnp import get_object_pose
 
 # Path to JSON key file
-JSON_KEY_PATH = '/home/locobot/Group1/ME326_Project/loulou_key.json'
+JSON_KEY_PATH = '/home/locobot/Desktop/ME326_Project/loulou_key.json'
 
 class PerceptionNode(Node):
     def __init__(self):
         super().__init__('perception_node')
         self.get_logger().info('Starting perception node initialization...')
         
-        self.jason_key_path = JSON_KEY_PATH
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.jason_key_path
-        self.get_logger().info(f'Set Google credentials path to: {self.jason_key_path}')
+        self.json_key_path = JSON_KEY_PATH
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.json_key_path
+        self.get_logger().info(f'Set Google credentials path to: {self.json_key_path}')
         
         # Initialize perception pipeline
         self.get_logger().info('Initializing perception pipeline...')
@@ -56,25 +56,25 @@ class PerceptionNode(Node):
         self.get_logger().info('Creating subscribers...')
         self.rgb_sub = self.create_subscription(
             Image,
-            '/locobot/camera/camera/color/image_raw',
+            '/locobot/camera/color/image_raw',
             self.rgb_callback,
             10)
         
         self.depth_sub = self.create_subscription(
             Image,
-            '/locobot/camera/camera/depth/image_rect_raw',
+            '/locobot/camera/depth/image_rect_raw',
             self.depth_callback,
             10)
             
         self.rgb_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera/camera/color/camera_info',
+            '/locobot/camera/color/camera_info',
             self.rgb_info_callback,
             10)
         
         self.depth_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera/camera/depth/camera_info',
+            '/locobot/camera/depth/camera_info',
             self.depth_info_callback,
             10)
         
@@ -94,7 +94,7 @@ class PerceptionNode(Node):
         self.get_logger().info('Publishers created')
             
         # Store the latest prompt
-        self.current_prompt = "Bottle"
+        self.current_prompt = "Banana"
         self.current_audio = None
         self.get_logger().info(f'Prompt initialized to: {self.current_prompt}')
 
@@ -141,7 +141,7 @@ class PerceptionNode(Node):
     def prompt_callback(self, msg):
         self.get_logger().info(f'Received prompt message: {msg.data}')
         if msg.data == 'None':
-            self.current_prompt = "Bottle"
+            self.current_prompt = "Banana"
             return
         else:
             self.current_prompt = msg.data
@@ -199,17 +199,6 @@ class PerceptionNode(Node):
                 
             image_bytes = img_encoded.tobytes()
             self.get_logger().debug('Image conversion complete')
-            
-            # Rank detected object by color
-            self.get_logger().info('Ranking detected object by color...')
-            colored_objects = self.pipeline.color_ranking(image_bytes)
-            self.get_logger().info('Color ranking complete')
-            sorted_names = [obj["name"] for obj in colored_objects]
-            hues = [obj["hue"] for obj in colored_objects]
-            bounding_boxes = [obj["bounding_box"] for obj in colored_objects]
-            self.get_logger().info(f'Colored objects: {sorted_names}')
-            self.get_logger().info(f'Hues: {hues}')
-            self.get_logger().info(f'Boxes: {bounding_boxes}')
 
 
             # Detect object in RGB image
@@ -225,15 +214,6 @@ class PerceptionNode(Node):
             else:
                 self.get_logger().info(f'Found object {self.current_prompt} at {(x, y)} pixel coordinates')
             
-            """# Rank colors of detected object
-            self.get_logger().info('Ranking colors of detected object...')
-            sorted_color_objects = self.pipeline.color_ranking(image_bytes)
-            if sorted_color_objects is None:
-                self.get_logger().info('No colored objects detected')
-                return
-            else:
-                sorted_color_objname = [obj["name"] for obj in sorted_color_objects]
-                self.get_logger().info(f'Color ranking: {sorted_color_objname}')"""
 
             #make sure coordinates are within image bounds
             h,w = aligned_depth.shape[:2]
@@ -248,7 +228,7 @@ class PerceptionNode(Node):
 
             pose_msg = PoseStamped()
             
-            pose_msg.header.frame_id = 'camera_color_frame'
+            pose_msg.header.frame_id = 'camera_locobot_link'
             pose_msg.header.stamp = self.get_clock().now().to_msg()
 
             # Calculate 3D position using pinhole camera model
@@ -261,10 +241,10 @@ class PerceptionNode(Node):
             X = (x - cx) * object_center_depth / fx
             Y = (y - cy) * object_center_depth / fy
             Z = object_center_depth
-            
-            pose_msg.pose.position.x = float(X)
-            pose_msg.pose.position.y = float(Y)
-            pose_msg.pose.position.z = float(Z)
+            self.get_logger().info(f'Before transform: {X}, {Y}, {Z} meters')
+            pose_msg.pose.position.x = float(Z)
+            pose_msg.pose.position.y = float(-X)
+            pose_msg.pose.position.z = float(-Y)
             
             # Set a default orientation (facing the camera)
             pose_msg.pose.orientation.w = 1.0
@@ -276,7 +256,7 @@ class PerceptionNode(Node):
             self.get_logger().info('Publishing object position...')
             try:
                 transform = self.tf_buffer.lookup_transform(
-                    'locobot/base_link',
+                    'locobot/arm_base_link',
                     pose_msg.header.frame_id,
                     rclpy.time.Time()
                 )
