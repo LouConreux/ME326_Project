@@ -12,6 +12,7 @@ import tf2_ros
 import os
 from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
 from camera_utils import align_depth
+import time
 
 # Import your existing components
 from pipeline_perception import PipelinePerception
@@ -150,6 +151,7 @@ class PerceptionNode(Node):
         
     def process_images(self):
         """Process RGB and depth images when both are available"""
+        time.sleep(3)
         self.get_logger().debug('Starting image processing')
         
         # Check if we have all required data
@@ -200,18 +202,6 @@ class PerceptionNode(Node):
             image_bytes = img_encoded.tobytes()
             self.get_logger().debug('Image conversion complete')
             
-            # Rank detected object by color
-            self.get_logger().info('Ranking detected object by color...')
-            colored_objects = self.pipeline.color_ranking(image_bytes)
-            self.get_logger().info('Color ranking complete')
-            sorted_names = [obj["name"] for obj in colored_objects]
-            hues = [obj["hue"] for obj in colored_objects]
-            bounding_boxes = [obj["bounding_box"] for obj in colored_objects]
-            self.get_logger().info(f'Colored objects: {sorted_names}')
-            self.get_logger().info(f'Hues: {hues}')
-            self.get_logger().info(f'Boxes: {bounding_boxes}')
-
-
             # Detect object in RGB image
             self.get_logger().debug(f'Detecting object: {self.current_prompt}')
             x, y = self.pipeline.detector.find_center(
@@ -224,16 +214,7 @@ class PerceptionNode(Node):
                 return
             else:
                 self.get_logger().info(f'Found object {self.current_prompt} at {(x, y)} pixel coordinates')
-            
-            """# Rank colors of detected object
-            self.get_logger().info('Ranking colors of detected object...')
-            sorted_color_objects = self.pipeline.color_ranking(image_bytes)
-            if sorted_color_objects is None:
-                self.get_logger().info('No colored objects detected')
-                return
-            else:
-                sorted_color_objname = [obj["name"] for obj in sorted_color_objects]
-                self.get_logger().info(f'Color ranking: {sorted_color_objname}')"""
+
 
             #make sure coordinates are within image bounds
             h,w = aligned_depth.shape[:2]
@@ -248,7 +229,7 @@ class PerceptionNode(Node):
 
             pose_msg = PoseStamped()
             
-            pose_msg.header.frame_id = 'camera_color_frame'
+            pose_msg.header.frame_id = 'camera_locobot_link'
             pose_msg.header.stamp = self.get_clock().now().to_msg()
 
             # Calculate 3D position using pinhole camera model
@@ -262,9 +243,9 @@ class PerceptionNode(Node):
             Y = (y - cy) * object_center_depth / fy
             Z = object_center_depth
             
-            pose_msg.pose.position.x = float(X)
-            pose_msg.pose.position.y = float(Y)
-            pose_msg.pose.position.z = float(Z)
+            pose_msg.pose.position.x = float(Z)
+            pose_msg.pose.position.y = float(-X)
+            pose_msg.pose.position.z = float(-Y)
             
             # Set a default orientation (facing the camera)
             pose_msg.pose.orientation.w = 1.0
@@ -276,7 +257,7 @@ class PerceptionNode(Node):
             self.get_logger().info('Publishing object position...')
             try:
                 transform = self.tf_buffer.lookup_transform(
-                    'locobot/base_link',
+                    'locobot/arm_base_link',
                     pose_msg.header.frame_id,
                     rclpy.time.Time()
                 )

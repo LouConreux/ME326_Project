@@ -1,65 +1,4 @@
-# import math
-# import rclpy
-# from rclpy.node import Node
-# from geometry_msgs.msg import PoseStamped
-# from std_msgs.msg import Bool
-# from interbotix_xs_modules.xs_robot.locobot import InterbotixLocobotXS
-# from scipy.spatial.transform import Rotation as R
-# from arm_control_wrapper import ArmWrapperNode  # Import your arm control wrapper
-# import time
-
-
-# class Manipulation(Node):
-#     def __init__(self):
-#         super().__init__('maniplation')
-
-#         locobot = InterbotixLocobotXS(
-#             robot_model='locobot_wx250s',
-#             robot_name='locobot',
-#             arm_model='mobile_wx250s'
-#         )
-
-#         # Initialize the ArmWrapperNode as part of this script
-#         self.arm_wrapper_node = ArmWrapperNode()
-
-#         # Subscribe to the detected object pose topic
-#         self.object_pose_subscriber = self.create_subscription(
-#             PoseStamped,
-#             '/detected_object_pose',  # Topic from perception node
-#             self.object_pose_callback,
-#             10
-#         )
-
-#     def object_pose_callback(self, msg):
-#         self.get_logger().info(f"Detected Object Pose: x={msg.pose.position.x}, y={msg.pose.position.y}, z={msg.pose.position.z}")
-
-#         # Call the ArmWrapperNode to move the arm to the object position
-#         self.move_arm_to_object(msg)
-
-#     def move_arm_to_object(self, msg):
-#         # Use ArmWrapperNode to move the arm to the detected object's pose
-#         # We pass the position and orientation of the object
-#         self.arm_wrapper_node.pose_callback(msg)  # This will handle both simulation or hardware motion
-
-#         # Log that we're moving the arm
-#         self.get_logger().info(f"Moving arm to object pose at: x={msg.pose.position.x}, y={msg.pose.position.y}, z={msg.pose.position.z}")
-
-# def main():
-#     rclpy.init()
-#     node = Manipulation()
-    
-#     try:
-#         rclpy.spin(node)  # Keep spinning to receive object pose and move the arm
-#     except KeyboardInterrupt:
-#         pass
-#     finally:
-#         node.destroy_node()
-#         rclpy.shutdown()
-
-# if __name__ == "__main__":
-#     main()
-
-
+# Add the following method to your Manipulation class in manipulation.py
 
 import math
 import rclpy
@@ -152,6 +91,38 @@ class Manipulation(Node):
         # Open the gripper to release the object
         self.get_logger().info("Releasing the object by opening the gripper.")
         self.arm_wrapper_node.gripper_callback(Bool(data=True))  # Assuming opening gripper means True
+    
+    # def pick_and_place(self, object_pose):
+    #     """
+    #     Execute a complete pick and place operation
+        
+    #     Args:
+    #         object_pose: PoseStamped containing object position
+    #     """
+    #     # First move to the pre-grasp position
+    #     self.get_logger().info(f"Moving to pre-grasp position")
+    #     # Implementation depends on your robot's arm control
+        
+    #     # Then grasp the object
+    #     self.get_logger().info(f"Closing gripper")
+    #     # Implementation to close gripper
+        
+    #     # Lift the object
+    #     self.get_logger().info(f"Lifting object")
+    #     # Implementation to lift arm
+        
+    #     # Move to destination (this would come from the task manager)
+    #     self.get_logger().info(f"Moving to destination")
+    #     # Implementation to move arm to destination
+        
+    #     # Place the object
+    #     self.get_logger().info(f"Releasing object")
+    #     # Implementation to open gripper
+        
+    #     # Return to home position
+    #     self.get_logger().info(f"Returning to home position")
+    #     # Implementation to move arm to home
+
 
 def main():
     rclpy.init()
@@ -167,7 +138,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-

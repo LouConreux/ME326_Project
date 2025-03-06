@@ -3,29 +3,20 @@
 Main Coordinator Node
 -------------------
 This node coordinates the robot's behavior based on speech commands.
-It manages the interactions between speech processing, perception, and task execution.
+It manages speech recording and monitors task completion.
 """
 
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Bool
-from geometry_msgs.msg import PoseStamped
-import json
 import time
 
 class MainCoordinator(Node):
-    """ROS node that coordinates tasks and actions based on speech commands."""
+    """ROS node that handles speech recording and monitors task status."""
     
     def __init__(self):
         super().__init__('main_coordinator')
         self.get_logger().info('Starting main coordinator node...')
-        
-        # Task state tracking
-        self.current_task = None
-        self.target_object = None
-        self.target_color = None
-        self.destination = None
-        self.task_in_progress = False
         
         # Publishers
         self.record_pub = self.create_publisher(
@@ -34,33 +25,7 @@ class MainCoordinator(Node):
             10
         )
         
-        self.perception_pub = self.create_publisher(
-            String, 
-            '/perception/activate', 
-            10
-        )
-        
-        self.task_pub = self.create_publisher(
-            String, 
-            '/task/execute', 
-            10
-        )
-        
         # Subscribers
-        self.command_sub = self.create_subscription(
-            String, 
-            '/speech/parsed_command', 
-            self.command_callback, 
-            10
-        )
-        
-        self.target_loc_sub = self.create_subscription(
-            PoseStamped, 
-            '/perception/target_location', 
-            self.target_location_callback, 
-            10
-        )
-        
         self.task_status_sub = self.create_subscription(
             String, 
             '/task/status', 
@@ -91,95 +56,6 @@ class MainCoordinator(Node):
         self.record_pub.publish(msg)
         self.get_logger().info('Requested start of speech recording')
     
-    def command_callback(self, msg):
-        """
-        Process the parsed command from speech recognition.
-        
-        Args:
-            msg: String message containing JSON-formatted command details
-        """
-        try:
-            # Parse the JSON command
-            command = json.loads(msg.data)
-            self.get_logger().info(f'Received command: {command}')
-            
-            # Store the current task parameters
-            self.current_task = command.get('task_type')
-            self.target_object = command.get('object')
-            self.target_color = command.get('color')
-            self.destination = command.get('destination')
-            
-            if not self.current_task:
-                self.get_logger().warn('Received command without task type')
-                return
-            
-            # Don't start a new task if one is already in progress
-            if self.task_in_progress:
-                self.get_logger().info('Task already in progress, ignoring new command')
-                return
-            
-            self.task_in_progress = True
-            
-            # For object-related tasks, activate perception
-            if self.target_object:
-                perceive_msg = String()
-                search_target = self.target_object
-                if self.target_color:
-                    search_target = f"{self.target_color} {self.target_object}"
-                
-                perceive_msg.data = search_target
-                self.perception_pub.publish(perceive_msg)
-                self.get_logger().info(f"Requested perception to find: {search_target}")
-            
-            # For color sorting tasks, no need to find a specific object
-            elif self.current_task == 'sort':
-                task_msg = String()
-                task_msg.data = json.dumps({
-                    "task_type": "sort",
-                    "parameters": {}
-                })
-                self.task_pub.publish(task_msg)
-                self.get_logger().info("Requested color sorting task")
-            
-            # If something went wrong, reset task state
-            else:
-                self.get_logger().warn("Couldn't determine what to do with the command")
-                self.task_in_progress = False
-        
-        except Exception as e:
-            self.get_logger().error(f'Error processing command: {str(e)}')
-            self.task_in_progress = False
-    
-    def target_location_callback(self, msg):
-        """
-        Handle the detected target location from perception.
-        
-        Args:
-            msg: PoseStamped message with the position of the detected object
-        """
-        if not self.task_in_progress or not self.current_task:
-            return
-        
-        self.get_logger().info(f"Received target location: {msg.pose.position}")
-        
-        # Create task execution message
-        task_msg = String()
-        task_params = {
-            "task_type": self.current_task,
-            "object": self.target_object,
-            "color": self.target_color,
-            "destination": self.destination,
-            "position": {
-                "x": msg.pose.position.x,
-                "y": msg.pose.position.y,
-                "z": msg.pose.position.z
-            }
-        }
-        
-        task_msg.data = json.dumps(task_params)
-        self.task_pub.publish(task_msg)
-        self.get_logger().info(f"Sent task execution command for {self.current_task}")
-    
     def task_status_callback(self, msg):
         """
         Handle status updates from task execution.
@@ -200,13 +76,6 @@ class MainCoordinator(Node):
             self.get_logger().info("Task completed successfully")
         else:
             self.get_logger().warn("Task failed or was cancelled")
-        
-        # Reset task state
-        self.task_in_progress = False
-        self.current_task = None
-        self.target_object = None
-        self.target_color = None
-        self.destination = None
         
         # Wait a moment, then start listening again
         time.sleep(2.0)
