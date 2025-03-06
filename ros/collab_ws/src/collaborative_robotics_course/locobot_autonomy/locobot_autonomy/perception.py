@@ -237,7 +237,7 @@ class PerceptionNode(Node):
 
             pose_msg = PoseStamped()
             
-            pose_msg.header.frame_id = 'camera_color_frame'
+            pose_msg.header.frame_id = 'camera_locobot_link'
             pose_msg.header.stamp = self.get_clock().now().to_msg()
 
             # Calculate 3D position using pinhole camera model
@@ -265,7 +265,7 @@ class PerceptionNode(Node):
             self.get_logger().info('Publishing object position...')
             try:
                 transform = self.tf_buffer.lookup_transform(
-                    'locobot/base_link',
+                    'locobot/arm_base_link',
                     pose_msg.header.frame_id,
                     rclpy.time.Time()
                 )
