@@ -48,18 +48,3 @@ class PipelinePerception:
         object_name = object_name.strip().lower().replace(" ", "").replace("\n", "").replace("\r", "")
         center_coordinates = self.detector.find_center(image, object_name)
         return center_coordinates, object_name
-    
-    def color_ranking(self, image):
-        """
-        Ranks the colors of the detected object in the image.
-
-        Parameters:
-        - image: The image (in bytes) input in which the object should be detected.
-
-        Returns:
-        - color_ranking: A list of tuples representing the color ranking of the object.
-        """
-        colored_objects = self.detector.get_colored_objects(image)
-        sorted_objects = sorted(colored_objects, key=lambda obj: (obj["hue"] if obj["hue"] >= 250 else obj["hue"] + 360))
-        return sorted_objects
-    
