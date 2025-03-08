@@ -8,17 +8,19 @@ from std_msgs.msg import Bool
 from interbotix_xs_modules.xs_robot.locobot import InterbotixLocobotXS
 from scipy.spatial.transform import Rotation as R
 import sys
-sys.path.append("/home/locobot/Group3/ME326_Project/ros/collab_ws/src/locobot_wrapper/scripts")
+sys.path.append("/home/locobot/Desktop/ME326_Project/ros/collab_ws/src/locobot_wrapper/scripts")
 from arm_control_wrapper import ArmWrapperNode  # Import your arm control wrapper
 import time
 
 
 class Manipulation(Node):
     def __init__(self):
-        super().__init__('maniplation')
+        super().__init__('manipulation')
 
         # Initialize the ArmWrapperNode as part of this script
         self.arm_wrapper_node = ArmWrapperNode()
+
+        self.base_goal_reach = False
 
         # Subscribe to the detected object pose topic
         self.object_pose_subscriber = self.create_subscription(
@@ -28,13 +30,27 @@ class Manipulation(Node):
             10
         )
 
-    def object_pose_callback(self, msg):
-        self.get_logger().info(f"Detected Object Pose: x={msg.pose.position.x}, y={msg.pose.position.y}, z={msg.pose.position.z}")
+        self.goal_reached_subscriber = self.create_subscription(
+            Bool, 
+            "/robot_at_goal", 
+            self.base_goal_reach_callback,
+            10)
 
-        # Call the ArmWrapperNode to move the arm to the object position and pick it
-        self.pick_object(msg)
+    def base_goal_reach_callback(self, msg):
+        self.base_goal_reach = msg.data
+
+
+    def object_pose_callback(self, msg):
+        if self.base_goal_reach:
+            self.get_logger().info(f"Detected Object Pose: x={msg.pose.position.x}, y={msg.pose.position.y}, z={msg.pose.position.z}")
+            # Call the ArmWrapperNode to move the arm to the object position and pick it
+            self.pick_object(msg)
+        else:
+            self.get_logger().info(f"Did not reach to the goal yet ...")
+
 
     def pick_object(self, msg):
+
         # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = 0.3, z = 0.2)
 
         # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = 0.3, z = 0.2, roll = 2.0)

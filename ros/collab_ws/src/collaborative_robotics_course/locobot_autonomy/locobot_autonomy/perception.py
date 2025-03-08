@@ -151,7 +151,6 @@ class PerceptionNode(Node):
         
     def process_images(self):
         """Process RGB and depth images when both are available"""
-        time.sleep(3)
         self.get_logger().debug('Starting image processing')
         
         # Check if we have all required data
@@ -203,7 +202,7 @@ class PerceptionNode(Node):
             self.get_logger().debug('Image conversion complete')
             
             # Rank detected object by color
-            self.get_logger().info('Ranking detected object by color...')
+            """self.get_logger().info('Ranking detected object by color...')
             colored_objects = self.pipeline.color_ranking(image_bytes)
             self.get_logger().info('Color ranking complete')
             sorted_names = [obj["name"] for obj in colored_objects]
@@ -211,7 +210,7 @@ class PerceptionNode(Node):
             bounding_boxes = [obj["bounding_box"] for obj in colored_objects]
             self.get_logger().info(f'Colored objects: {sorted_names}')
             self.get_logger().info(f'Hues: {hues}')
-            self.get_logger().info(f'Boxes: {bounding_boxes}')
+            self.get_logger().info(f'Boxes: {bounding_boxes}')"""
 
 
             # Detect object in RGB image
@@ -228,7 +227,7 @@ class PerceptionNode(Node):
                 self.get_logger().info(f'Found object {self.current_prompt} at {(x, y)} pixel coordinates')
             
             # Get object color
-            self.get_logger().info('Getting object color...')
+            """self.get_logger().info('Getting object color...')
             object_color = self.pipeline.detector.get_object_color(
                 image_bytes=image_bytes,
                 object_name=self.current_prompt
@@ -236,7 +235,7 @@ class PerceptionNode(Node):
             if object_color is None:
                 self.get_logger().info('Object color not found')
             else:
-                self.get_logger().info(f'Object {self.current_prompt} is {object_color}')
+                self.get_logger().info(f'Object {self.current_prompt} is {object_color}')"""
 
             #make sure coordinates are within image bounds
             h,w = aligned_depth.shape[:2]

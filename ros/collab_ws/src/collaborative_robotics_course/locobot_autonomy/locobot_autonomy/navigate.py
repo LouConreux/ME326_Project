@@ -7,8 +7,11 @@ This script controls the robot to go from the origin (0, 0, 0) to the published 
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
+import tf2_ros
+from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
 
 import geometry_msgs
+from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -17,6 +20,7 @@ from visualization_msgs.msg import Marker
 # odom from gazebo is "best effort", so this is needed for the subscriber
 from rclpy.qos import qos_profile_sensor_data, QoSProfile 
 
+import time
 import numpy as np
 
 class Navigation(Node):
@@ -35,12 +39,15 @@ class Navigation(Node):
         self.target_pose_reached_bool = False
         self.target_pose = None
 
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
+
         # Set the target pose to (10, 10, 10) - we don't switch between points now
         
         # target_pose = Pose()
-        # target_pose.position.x = 3.0
-        # target_pose.position.y = 0.0
-        # target_pose.position.z = 0.0
+        # target_pose.pose.position.x = 3.0
+        # target_pose.pose.position.y = 0.0
+        # target_pose.pose.position.z = 0.0
         # self.target_pose = target_pose
 
         # Initialize locobot
@@ -53,8 +60,8 @@ class Navigation(Node):
         # Define the publishers, including "Twist" for moving the base, and "Bool" for determining if the robot is at the goal pose
         self.mobile_base_vel_publisher = self.create_publisher(
             Twist, 
-            "/locobot/diffdrive_controller/cmd_vel_unstamped",
-             1)
+            "/locobot/mobile_base/cmd_vel",
+            10)
         
         self.goal_reached_publisher = self.create_publisher(
             Bool, 
@@ -66,16 +73,16 @@ class Navigation(Node):
         #self.target_pose_visual = self.create_publisher(Marker, "/locobot/mobile_base/target_pose_visual", 1)
 
         # Define the subscribers, including "Pose" to get the goal pose, and "Odometry" to get the instantaneous pose of the robot
-        self.pose_sub = self.create_subscription(
-            Pose,
-            '/goal_pose',  # topic
+        self.object_pose_subscriber = self.create_subscription(
+            PoseStamped,
+            '/detected_object_pose',  # Topic from perception node
             self.position_callback,
-            qos_profile=qos_profile_sensor_data  # QoS depth
+            10
         )
 
         self.odom_subscription = self.create_subscription(
             Odometry,
-            "/locobot/sim_ground_truth_pose",   #topic
+            "/locobot/mobile_base/odom",   #topic
             self.odom_mobile_base_callback,
             qos_profile=qos_profile_sensor_data
         )
@@ -92,16 +99,15 @@ class Navigation(Node):
         
 
 
-
     def position_callback(self, msg):
         # get the target pose based on the Pose data
         self.target_pose = msg
-        self.get_logger().info(f'Position -> x: {msg.position.x}, y: {msg.position.y}, z: {msg.position.z}')
-        self.get_logger().info(f'Orientation -> x: {msg.orientation.x}, y: {msg.orientation.y}, z: {msg.orientation.z}, w: {msg.orientation.w}')
+        self.get_logger().info(f'Position -> x: {msg.pose.position.x}, y: {msg.pose.position.y}, z: {msg.pose.position.z}')
+        self.get_logger().info(f'Orientation -> x: {msg.pose.orientation.x}, y: {msg.pose.orientation.y}, z: {msg.pose.orientation.z}, w: {msg.pose.orientation.w}')
 
-        self.target_pose.position.x = msg.position.x - 0.2
-        self.target_pose.position.y = msg.position.y - 0.2
-        self.target_pose.position.z = msg.position.z
+        self.target_pose.pose.position.x = msg.pose.position.x - 0.2
+        self.target_pose.pose.position.y = msg.pose.position.y
+        self.target_pose.pose.position.z = msg.pose.position.z
 
 
 
@@ -109,17 +115,28 @@ class Navigation(Node):
 
 
         if self.target_pose is None:
-            self.get_logger().warn("No target set yet. Waiting for target...")
+            #self.get_logger().warn("No target set yet. Waiting for target...")
             return
 
-        # Extract position and orientation from the Odometry data
-        x_data = data.pose.pose.position.x
-        y_data = data.pose.pose.position.y
-        z_data = data.pose.pose.position.z
-        qw = data.pose.pose.orientation.w
-        qx = data.pose.pose.orientation.x
-        qy = data.pose.pose.orientation.y
-        qz = data.pose.pose.orientation.z
+        pose_msg = PoseStamped()  
+        pose_msg.header.frame_id = 'odom'
+        pose_msg.header.stamp = self.get_clock().now().to_msg()
+
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                'locobot/arm_base_link',
+                pose_msg.header.frame_id,
+                rclpy.time.Time()
+            )
+            
+            pose_base = do_transform_pose_stamped(pose_msg, transform)
+            self.get_logger().info(f'Pose Base: {pose_base.pose.position}')
+            self.pose_pub.publish(pose_base)
+            self.get_logger().info(f'Published position for {self.current_prompt} at depth {object_center_depth}m')
+            
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
+                tf2_ros.ExtrapolationException) as e:
+            self.get_logger().error(f'TF2 error: {str(e)}')
 
         # Calculate the rotation matrix
         R11 = qw**2 + qx**2 - qy**2 - qz**2
@@ -134,8 +151,8 @@ class Navigation(Node):
         point_P.position.z = 0.1  # slightly above the ground
 
         # Calculate error between the target pose and current pose
-        err_x = self.target_pose.position.x - point_P.position.x
-        err_y = self.target_pose.position.y - point_P.position.y
+        err_x = self.target_pose.pose.position.x - point_P.position.x
+        err_y = self.target_pose.pose.position.y - point_P.position.y
         self.get_logger().info(f'err -> x: {err_x}, y: {err_y}')
 
         error_vect = np.matrix([[err_x], [err_y]])
@@ -182,9 +199,11 @@ class Navigation(Node):
 
         # Control message to command velocities
         control_msg = Twist()
+        self.get_logger().info(f'Control Input:{control_input}')
         control_msg.linear.x = float(control_input.item(0))
         control_msg.angular.z = float(control_input.item(1))
-
+        self.get_logger().info(f"Move in X-axis: {control_msg.linear.x}, Rotate in Z-axis: {control_msg.angular.z}")
+        
         self.mobile_base_vel_publisher.publish(control_msg)
 
         # Check if target is reached
@@ -201,6 +220,7 @@ class Navigation(Node):
             goal_msg.data = True
             self.goal_reached_publisher.publish(goal_msg)
             self.get_logger().info("Published goal reached signal.")
+            time.sleep(1000)
         
 def main(args=None):
     rclpy.init(args=args)

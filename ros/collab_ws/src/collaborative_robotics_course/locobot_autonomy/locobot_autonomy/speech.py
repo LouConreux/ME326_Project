@@ -16,6 +16,7 @@ import wave
 from google.cloud import speech_v1p1beta1 as speech
 import time
 import sounddevice as sd
+import numpy as np
 
 from speech_transcriber import SpeechTranscriber
 
@@ -101,7 +102,7 @@ class SpeechProcessorNode(Node):
         Record audio from microphone, transcribe, and process the command.
         """
         try:
-            self.play_start_ringtone()
+            #self.play_start_ringtone()
 
             # Record audio
             self.get_logger().info(f"Recording for {self.recording_duration} seconds...")
@@ -113,7 +114,7 @@ class SpeechProcessorNode(Node):
             )
             sd.wait()  # Wait until recording is complete
 
-            self.play_stop_ringtone()
+            #self.play_stop_ringtone()
             
             self.get_logger().info("Recording complete")
             
