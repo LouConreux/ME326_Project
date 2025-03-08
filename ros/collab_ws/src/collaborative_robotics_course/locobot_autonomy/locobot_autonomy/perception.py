@@ -12,6 +12,7 @@ import tf2_ros
 import os
 from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
 from camera_utils import align_depth
+import time
 
 # Import your existing components
 from pipeline_perception import PipelinePerception
@@ -80,7 +81,7 @@ class PerceptionNode(Node):
         
         self.prompt_sub = self.create_subscription(
             String,
-            '/user_prompt',
+            '/speech/target_object',
             self.prompt_callback,
             10)
         self.get_logger().info('All subscribers created')
@@ -150,6 +151,7 @@ class PerceptionNode(Node):
         
     def process_images(self):
         """Process RGB and depth images when both are available"""
+        time.sleep(3)
         self.get_logger().debug('Starting image processing')
         
         # Check if we have all required data
@@ -199,6 +201,17 @@ class PerceptionNode(Node):
                 
             image_bytes = img_encoded.tobytes()
             self.get_logger().debug('Image conversion complete')
+            
+            # Rank detected object by color
+            self.get_logger().info('Ranking detected object by color...')
+            colored_objects = self.pipeline.color_ranking(image_bytes)
+            self.get_logger().info('Color ranking complete')
+            sorted_names = [obj["name"] for obj in colored_objects]
+            hues = [obj["hue"] for obj in colored_objects]
+            bounding_boxes = [obj["bounding_box"] for obj in colored_objects]
+            self.get_logger().info(f'Colored objects: {sorted_names}')
+            self.get_logger().info(f'Hues: {hues}')
+            self.get_logger().info(f'Boxes: {bounding_boxes}')
 
 
             # Detect object in RGB image
@@ -214,6 +227,16 @@ class PerceptionNode(Node):
             else:
                 self.get_logger().info(f'Found object {self.current_prompt} at {(x, y)} pixel coordinates')
             
+            # Get object color
+            self.get_logger().info('Getting object color...')
+            object_color = self.pipeline.detector.get_object_color(
+                image_bytes=image_bytes,
+                object_name=self.current_prompt
+            )
+            if object_color is None:
+                self.get_logger().info('Object color not found')
+            else:
+                self.get_logger().info(f'Object {self.current_prompt} is {object_color}')
 
             #make sure coordinates are within image bounds
             h,w = aligned_depth.shape[:2]
@@ -241,7 +264,7 @@ class PerceptionNode(Node):
             X = (x - cx) * object_center_depth / fx
             Y = (y - cy) * object_center_depth / fy
             Z = object_center_depth
-            self.get_logger().info(f'Before transform: {X}, {Y}, {Z} meters')
+            
             pose_msg.pose.position.x = float(Z)
             pose_msg.pose.position.y = float(-X)
             pose_msg.pose.position.z = float(-Y)

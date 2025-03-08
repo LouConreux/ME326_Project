@@ -56,7 +56,11 @@ install(PROGRAMS
   locobot_autonomy/pipeline_perception.py
   locobot_autonomy/speech_transcriber.py
   locobot_autonomy/vision_detection.py
+  locobot_autonomy/speech.py
+  locobot_autonomy/main.py
+  locobot_autonomy/task_queue_manager.py
   locobot_autonomy/manipulation.py
+  locobot_autonomy/navigation.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

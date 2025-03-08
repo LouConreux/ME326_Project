@@ -201,7 +201,7 @@ class Navigation(Node):
             goal_msg.data = True
             self.goal_reached_publisher.publish(goal_msg)
             self.get_logger().info("Published goal reached signal.")
-
+        
 def main(args=None):
     rclpy.init(args=args)
     cls_obj = Navigation()  # Instantiate object of the class
