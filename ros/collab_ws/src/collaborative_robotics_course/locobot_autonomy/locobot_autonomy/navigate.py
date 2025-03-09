@@ -130,9 +130,7 @@ class Navigation(Node):
             )
             
             pose_base = do_transform_pose_stamped(pose_msg, transform)
-            self.get_logger().info(f'Pose Base: {pose_base.pose.position}')
-            self.pose_pub.publish(pose_base)
-            self.get_logger().info(f'Published position for {self.current_prompt} at depth {object_center_depth}m')
+            self.get_logger().info(f'Odom Pose: {pose_base.pose.position}')
             
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
                 tf2_ros.ExtrapolationException) as e:
