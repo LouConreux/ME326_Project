@@ -38,9 +38,11 @@ class Manipulation(Node):
 
     def base_goal_reach_callback(self, msg):
         self.base_goal_reach = msg.data
+        self.get_logger().info(f'{msg.data}')
 
 
     def object_pose_callback(self, msg):
+        # self.base_goal_reach = True
         if self.base_goal_reach:
             self.get_logger().info(f"Detected Object Pose: x={msg.pose.position.x}, y={msg.pose.position.y}, z={msg.pose.position.z}")
             # Call the ArmWrapperNode to move the arm to the object position and pick it
@@ -50,38 +52,99 @@ class Manipulation(Node):
 
 
     def pick_object(self, msg):
+######## TASK 2 #########
+        self.arm_wrapper_node.locobot.gripper.release()
+        self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x - 0.05, 
+                                                                 y = msg.pose.position.y + 0.02, 
+                                                                 z = msg.pose.position.z + 0.1,
+                                                                 roll = math.pi/2.5, 
+                                                                 pitch = math.pi/2.3
+                                                                 )
+        self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x - 0.05, 
+                                                                 y = msg.pose.position.y + 0.02, 
+                                                                 z = msg.pose.position.z + 0.02,
+                                                                 roll = math.pi/2.5, 
+                                                                 pitch = math.pi/2.3
+                                                                 )
 
+        self.arm_wrapper_node.locobot.gripper.grasp()
+
+        self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x - 0.1, 
+                                                                 y = msg.pose.position.y + 0.02, 
+                                                                 z = msg.pose.position.z + 0.2,
+                                                                 roll = math.pi/2.5, 
+                                                                 pitch = math.pi/2.5
+                                                                 )
+        
+        # self.arm_wrapper_node.locobot.arm.set_single_joint_position('waist', math.pi/4.0)
+
+        self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x - 0.1, 
+                                                                 y = msg.pose.position.y - 0.2, 
+                                                                 z = msg.pose.position.z + 0.2,
+                                                                 roll = math.pi/2.5, 
+                                                                 pitch = math.pi/2.5
+                                                                 )
+        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x - 0.1, 
+        #                                                          y = msg.pose.position.y - 0.2, 
+        #                                                          z = msg.pose.position.z + 0.1,
+        #                                                          roll = math.pi/2.5, 
+        #                                                          pitch = math.pi/2.5
+        #                                                          )
+        self.arm_wrapper_node.locobot.gripper.release()
+        self.arm_wrapper_node.locobot.arm.go_to_sleep_pose()
+        self.arm_wrapper_node.locobot.shutdown()
+#########
+# ######## TASK 1 #########
+#         self.arm_wrapper_node.locobot.gripper.release()
+#         self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x + 0.02, 
+#                                                                  y = msg.pose.position.y + 0.02, 
+#                                                                  z = msg.pose.position.z + 0.1,
+#                                                                  roll = math.pi/2.5, 
+#                                                                  pitch = math.pi/2.5
+#                                                                  )
+#         self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x + 0.02, 
+#                                                                  y = msg.pose.position.y + 0.02, 
+#                                                                  z = msg.pose.position.z + 0.02,
+#                                                                  roll = math.pi/2.5, 
+#                                                                  pitch = math.pi/2.5
+#                                                                  )
+
+#         self.arm_wrapper_node.locobot.gripper.grasp()
+#         self.arm_wrapper_node.locobot.arm.go_to_sleep_pose()
+#         self.arm_wrapper_node.locobot.shutdown()
+
+# #########
         # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = 0.3, z = 0.2)
 
         # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = 0.3, z = 0.2, roll = 2.0)
         # self.arm_wrapper_node.locobot.gripper.release()
         # self.arm_wrapper_node.locobot.gripper.grasp()
-        self.arm_wrapper_node.locobot.gripper.release()
-
-        self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x + 0.02, 
-                                                                 y = msg.pose.position.y + 0.02, 
-                                                                 z = msg.pose.position.z + 0.1,
-                                                                 roll = math.pi/2.5, 
-                                                                 pitch = math.pi/2.5
-                                                                 )
-        
-        self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x + 0.02, 
-                                                                 y = msg.pose.position.y + 0.02, 
-                                                                 z = msg.pose.position.z + 0.02,
-                                                                 roll = math.pi/2.5, 
-                                                                 pitch = math.pi/2.5
-                                                                 )
-
-        self.arm_wrapper_node.locobot.gripper.grasp()
-
-
-        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = 0.3, z = 0.2, yaw = 2.0)
         # self.arm_wrapper_node.locobot.gripper.release()
+
+        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x + 0.02, 
+        #                                                          y = msg.pose.position.y + 0.02, 
+        #                                                          z = msg.pose.position.z + 0.1,
+        #                                                          roll = math.pi/2.5, 
+        #                                                          pitch = math.pi/2.5
+        #                                                          )
+        
+        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x + 0.02, 
+        #                                                          y = msg.pose.position.y + 0.02, 
+        #                                                          z = msg.pose.position.z + 0.02,
+        #                                                          roll = math.pi/2.5, 
+        #                                                          pitch = math.pi/2.5
+        #                                                          )
+
         # self.arm_wrapper_node.locobot.gripper.grasp()
 
-        self.arm_wrapper_node.locobot.arm.go_to_sleep_pose()
 
-        self.arm_wrapper_node.locobot.shutdown()
+        # # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = 0.3, z = 0.2, yaw = 2.0)
+        # # self.arm_wrapper_node.locobot.gripper.release()
+        # # self.arm_wrapper_node.locobot.gripper.grasp()
+
+        # self.arm_wrapper_node.locobot.arm.go_to_sleep_pose()
+
+        # self.arm_wrapper_node.locobot.shutdown()
 
 
         # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x=0.3, z=0.2)
