@@ -18,7 +18,7 @@ class SpeechTranscriber:
 
         self.client = speech.SpeechClient()
 
-                # Define task types and their synonyms/patterns
+        # Define task types and their synonyms/patterns
         self.task_mapping = {
             # Object retrieval task
             'retrieve': [

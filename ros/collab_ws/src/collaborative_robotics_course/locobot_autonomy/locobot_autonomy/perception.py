@@ -151,6 +151,7 @@ class PerceptionNode(Node):
         
     def process_images(self):
         """Process RGB and depth images when both are available"""
+        time.sleep(0.5)
         self.get_logger().debug('Starting image processing')
         
         # Check if we have all required data
