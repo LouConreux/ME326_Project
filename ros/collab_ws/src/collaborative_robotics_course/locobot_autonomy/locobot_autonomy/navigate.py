@@ -42,6 +42,9 @@ class Navigation(Node):
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
+        self.max_linear_velocity = 0.2
+        self.max_angular_velocity = 0.2
+
         # Set the target pose to (10, 10, 10) - we don't switch between points now
         
         # target_pose = Pose()
@@ -89,7 +92,7 @@ class Navigation(Node):
 
         self.L = 0.1 #this is the distance of the point P (x,y) that will be controlled for position. The locobot base_link frame points forward in the positive x direction, the point P will be on the positive x-axis in the body-fixed frame of the robot mobile base
         #set targets for when a goal is reached: 
-        self.goal_reached_error = 0.1
+        self.goal_reached_error = 0.2
         self.integrated_error = np.matrix([[0],[0]]) #this is the integrated error for Proportional, Integral (PI) control
         # self.integrated_error_factor = 1.0 #multiply this by accumulated error, this is the Ki (integrated error) gain
         self.integrated_error_list = []
@@ -207,20 +210,24 @@ class Navigation(Node):
             control_input = np.linalg.inv(non_holonomic_mat)*point_p_error_signal #note: this matrix can always be inverted because the angle is L
     
 
-
             # Control message to command velocities
             control_msg = Twist()
             self.get_logger().info(f'Control Input:{control_input}')
-            control_msg.linear.x = float(control_input.item(0))
-            control_msg.angular.z = float(control_inpu(1))
+            control_msg.linear.x = min(self.max_linear_velocity,float(control_input.item(0)))
+            control_msg.angular.z = min(self.max_angular_velocity,float(control_input.item(1)))
             self.get_logger().info(f"Move in X-axis: {control_msg.linear.x}, Rotate in Z-axis: {control_msg.angular.z}")
-            
-            self.mobile_base_vel_publisher.publish(control_msg)
 
-            time.sleep(1)
 
             # Check if target is reached
             err_magnitude = np.linalg.norm(error_vect)
+            slow_down_distance = 1.0
+            if err_magnitude < slow_down_distance:
+                scaling_factor = max(0.2, err_magnitude/slow_down_distance)
+                control_msg.linear.x = control_msg.linear.x * scaling_factor
+                control_msg.angular.z = control_msg.angular.z * scaling_factor
+
+            self.mobile_base_vel_publisher.publish(control_msg)
+
             if err_magnitude < self.goal_reached_error:
                 self.get_logger().info(f"Target reached at: {point_P.position.x}, {point_P.position.y}, {point_P.position.z}")
                 # Once target is reached, stop the robot
