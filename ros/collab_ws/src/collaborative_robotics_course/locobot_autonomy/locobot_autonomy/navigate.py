@@ -74,8 +74,8 @@ class Navigation(Node):
 
         # Define the subscribers, including "Pose" to get the goal pose, and "Odometry" to get the instantaneous pose of the robot
         self.object_pose_subscriber = self.create_subscription(
-            PoseStamped,
-            '/detected_object_pose',  # Topic from perception node
+            Pose,
+            '/goal_pose',  # Topic from task manager
             self.position_callback,
             10
         )
@@ -101,13 +101,16 @@ class Navigation(Node):
 
     def position_callback(self, msg):
         # get the target pose based on the Pose data
-        self.target_pose = msg
-        self.get_logger().info(f'Position -> x: {msg.pose.position.x}, y: {msg.pose.position.y}, z: {msg.pose.position.z}')
-        self.get_logger().info(f'Orientation -> x: {msg.pose.orientation.x}, y: {msg.pose.orientation.y}, z: {msg.pose.orientation.z}, w: {msg.pose.orientation.w}')
-
-        self.target_pose.pose.position.x = msg.pose.position.x - 0.4
-        self.target_pose.pose.position.y = msg.pose.position.y
-        self.target_pose.pose.position.z = msg.pose.position.z
+        self.target_pose = PoseStamped()
+        self.target_pose.header.frame_id = 'locobot/arm_base_link'
+        self.target_pose.header.stamp = self.get_clock().now()
+        self.target_pose.pose = msg
+        self.get_logger().info(f'Position -> x: {msg.position.x}, y: {msg.position.y}, z: {msg.position.z}')
+        self.get_logger().info(f'Orientation -> x: {msg.orientation.x}, y: {msg.orientation.y}, z: {msg.orientation.z}, w: {msg.orientation.w}')
+        self.target_pose_reached_bool = False
+        #self.target_pose.pose.position.x = msg.pose.position.x - 0.2
+        #self.target_pose.pose.position.y = msg.pose.position.y - 0.2
+        #self.target_pose.pose.position.z = msg.pose.position.z
 
 
     def odom_mobile_base_callback(self, data):
@@ -130,23 +133,20 @@ class Navigation(Node):
                     rclpy.time.Time()
                 )
                 
-                odom_pose = do_transform_pose_stamped(data.pose, transform)
-                self.get_logger().info(f'Odom Pose: {odom_pose.pose.position}')
+                target_in_odom = do_transform_pose_stamped(self.target_pose, transform)
+                self.get_logger().info(f'Odom Pose: {target_in_odom.pose.position}')
                 self.get_logger().info(f'Targe Pose: {self.target_pose.pose.position}')
-
-                # self.target_pose = do_transform_pose_stamped(self.target_pose.pose, transform)
-                # self.get_logger().info(f'Transformed Target Pose: {self.target_pose.pose.position}')
                 
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
                     tf2_ros.ExtrapolationException) as e:
                 self.get_logger().error(f'TF2 error: {str(e)}')
 
-            x_data = odom_pose.pose.position.x
-            y_data = odom_pose.pose.position.y
-            qx = odom_pose.pose.orientation.x
-            qy = odom_pose.pose.orientation.y
-            qz = odom_pose.pose.orientation.z
-            qw = odom_pose.pose.orientation.w
+            x_data = target_in_odom.pose.position.x
+            y_data = target_in_odom.pose.position.y
+            qx = target_in_odom.pose.orientation.x
+            qy = target_in_odom.pose.orientation.y
+            qz = target_in_odom.pose.orientation.z
+            qw = target_in_odom.pose.orientation.w
 
             # Calculate the rotation matrix
             R11 = qw**2 + qx**2 - qy**2 - qz**2
@@ -161,8 +161,8 @@ class Navigation(Node):
             point_P.position.z = 0.1  # slightly above the ground
 
             # Calculate error between the target pose and current pose
-            err_x = self.target_pose.pose.position.x - point_P.position.x
-            err_y = self.target_pose.pose.position.y - point_P.position.y
+            err_x = target_in_odom.pose.position.x - point_P.position.x
+            err_y = target_in_odom.pose.position.y - point_P.position.y
             # self.get_logger().info(f'current pos -> x: {x_data}, y: {y_data}')
             # self.get_logger().info(f'err -> x: {err_x}, y: {err_y}')
 
@@ -212,7 +212,7 @@ class Navigation(Node):
             control_msg = Twist()
             self.get_logger().info(f'Control Input:{control_input}')
             control_msg.linear.x = float(control_input.item(0))
-            control_msg.angular.z = float(control_input.item(1))
+            control_msg.angular.z = float(control_inpu(1))
             self.get_logger().info(f"Move in X-axis: {control_msg.linear.x}, Rotate in Z-axis: {control_msg.angular.z}")
             
             self.mobile_base_vel_publisher.publish(control_msg)
