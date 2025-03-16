@@ -116,9 +116,6 @@ class VisionObjectDetector:
                 
                 min_x, max_x = max(0, min(x_coords)), min(width, max(x_coords))
                 min_y, max_y = max(0, min(y_coords)), min(height, max(y_coords))
-                
-                min_x, max_x = int(min_x*1.1), int(max_x*0.9)
-                min_y, max_y = int(min_y*1.1), int(max_y*0.9)
 
                 obj_region = hsv_image[min_y:max_y, min_x:max_x]
                 
@@ -156,3 +153,4 @@ class VisionObjectDetector:
                                 dominant_color = color
             bounding_box = [min_x, min_y, max_x, max_y]
             return dominant_color, bounding_box
+
