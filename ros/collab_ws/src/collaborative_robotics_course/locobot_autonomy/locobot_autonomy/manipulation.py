@@ -52,7 +52,7 @@ class Manipulation(Node):
 
 
     def pick_object(self, msg):
-######## TASK 2 #########
+######## TASK 3 #########
         self.arm_wrapper_node.locobot.gripper.release()
         self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x - 0.05, 
                                                                  y = msg.pose.position.y + 0.02, 
@@ -76,24 +76,17 @@ class Manipulation(Node):
                                                                  pitch = math.pi/2.5
                                                                  )
         
-        # self.arm_wrapper_node.locobot.arm.set_single_joint_position('waist', math.pi/4.0)
-
         self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x - 0.1, 
                                                                  y = msg.pose.position.y - 0.2, 
                                                                  z = msg.pose.position.z + 0.2,
                                                                  roll = math.pi/2.5, 
                                                                  pitch = math.pi/2.5
                                                                  )
-        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x - 0.1, 
-        #                                                          y = msg.pose.position.y - 0.2, 
-        #                                                          z = msg.pose.position.z + 0.1,
-        #                                                          roll = math.pi/2.5, 
-        #                                                          pitch = math.pi/2.5
-        #                                                          )
+ 
         self.arm_wrapper_node.locobot.gripper.release()
         self.arm_wrapper_node.locobot.arm.go_to_sleep_pose()
         self.arm_wrapper_node.locobot.shutdown()
-#########
+
 # ######## TASK 1 #########
 #         self.arm_wrapper_node.locobot.gripper.release()
 #         self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x + 0.02, 
@@ -112,148 +105,8 @@ class Manipulation(Node):
 #         self.arm_wrapper_node.locobot.gripper.grasp()
 #         self.arm_wrapper_node.locobot.arm.go_to_sleep_pose()
 #         self.arm_wrapper_node.locobot.shutdown()
-
 # #########
-        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = 0.3, z = 0.2)
-
-        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = 0.3, z = 0.2, roll = 2.0)
-        # self.arm_wrapper_node.locobot.gripper.release()
-        # self.arm_wrapper_node.locobot.gripper.grasp()
-        # self.arm_wrapper_node.locobot.gripper.release()
-
-        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x + 0.02, 
-        #                                                          y = msg.pose.position.y + 0.02, 
-        #                                                          z = msg.pose.position.z + 0.1,
-        #                                                          roll = math.pi/2.5, 
-        #                                                          pitch = math.pi/2.5
-        #                                                          )
         
-        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = msg.pose.position.x + 0.02, 
-        #                                                          y = msg.pose.position.y + 0.02, 
-        #                                                          z = msg.pose.position.z + 0.02,
-        #                                                          roll = math.pi/2.5, 
-        #                                                          pitch = math.pi/2.5
-        #                                                          )
-
-        # self.arm_wrapper_node.locobot.gripper.grasp()
-
-
-        # # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x = 0.3, z = 0.2, yaw = 2.0)
-        # # self.arm_wrapper_node.locobot.gripper.release()
-        # # self.arm_wrapper_node.locobot.gripper.grasp()
-
-        # self.arm_wrapper_node.locobot.arm.go_to_sleep_pose()
-
-        # self.arm_wrapper_node.locobot.shutdown()
-
-
-        # self.arm_wrapper_node.locobot.arm.set_ee_pose_components(x=0.3, z=0.2)
-        # self.arm_wrapper_node.locobot.arm.set_single_joint_position('waist', math.pi/4.0)
-        # self.arm_wrapper_node.locobot.gripper.release()
-
-        # self.arm_wrapper_node.locobot.arm.set_ee_cartesian_trajectory(x=0.1, z=-0.25)
-        # self.arm_wrapper_node.locobot.gripper.grasp()
-        # self.arm_wrapper_node.locobot.arm.set_ee_cartesian_trajectory(x=-0.1, z=0.25)
-        # self.arm_wrapper_node.locobot.arm.set_single_joint_position('waist', -math.pi/4.0)
-        # self.arm_wrapper_node.locobot.arm.set_ee_cartesian_trajectory(pitch=1.5)
-        # self.arm_wrapper_node.locobot.arm.set_ee_cartesian_trajectory(pitch=-1.5)
-        # self.arm_wrapper_node.locobot.arm.set_single_joint_position('waist', math.pi/4.0)
-        # self.arm_wrapper_node.locobot.arm.set_ee_cartesian_trajectory(x=0.1, z=-0.25)
-        # self.arm_wrapper_node.locobot.gripper.release()
-        # self.arm_wrapper_node.locobot.arm.set_ee_cartesian_trajectory(x=-0.1, z=0.25)
-        # self.arm_wrapper_node.locobot.arm.go_to_home_pose()
-        # self.arm_wrapper_node.locobot.arm.go_to_sleep_pose()
-        # Open gripper
-        # self.arm_wrapper_node.gripper_callback(Bool(data=True))  # Assuming closing gripper means False
-
-        # # Move arm to object pose
-        # self.arm_wrapper_node.pose_callback(msg)  # This will handle both simulation or hardware motion
-        # self.get_logger().info(f"Moving arm to object pose at: x={msg.pose.position.x}, y={msg.pose.position.y}, z={msg.pose.position.z}")
-
-        # # Close the gripper to pick up the object
-        # self.get_logger().info("Closing gripper to pick the object.")
-        # self.arm_wrapper_node.gripper_callback(Bool(data=False))  # Assuming closing gripper means False
-
-        # # Lift the arm slightly to avoid ground obstacles
-        # self.get_logger().info(f"Lifting arm to object pose at: x={msg.pose.position.x}, y={msg.pose.position.y}, z={msg.pose.position.z + 0.4}")
-        # # self.lift_arm()
-
-        # # Optionally, rotate the arm if necessary (e.g., to adjust orientation)
-        # self.get_logger().info(f"Moving arm to object pose at: x={msg.pose.position.x}, y={msg.pose.position.y + 0.2}, z={msg.pose.position.z + 0.4}")
-        # # self.rotate_arm()
-
-        # # # Lower the arm to drop the object
-        # self.get_logger().info(f"Lowering arm to a position at: x={msg.pose.position.x}, y={msg.pose.position.y + 0.2}, z={msg.pose.position.z}")
-        # # self.lower_arm()
-
-        # # Open the gripper to release the object
-        # # self.release_object()
-        # self.arm_wrapper_node.gripper_callback(Bool(data=True))  # Assuming closing gripper means False
-
-
-    def lift_arm(self):
-        # Move the arm upwards to avoid obstacles (e.g., lifting 10cm)
-        self.get_logger().info("Lifting the arm to avoid obstacles.")
-        # Update the pose by adding a small amount to the Z-axis (adjust this value as needed)
-        lifted_pose = PoseStamped()
-        lifted_pose.pose = self.arm_wrapper_node.get_current_pose()
-        lifted_pose.pose.position.z += 0.1  # Lift 10 cm
-        self.arm_wrapper_node.pose_callback(lifted_pose)
-
-    def rotate_arm(self):
-        # Rotate the arm if needed (e.g., rotating 90 degrees around the Z-axis)
-        self.get_logger().info("Rotating the arm.")
-        current_pose = self.arm_wrapper_node.get_current_pose()
-        rotation = R.from_euler('z', 90, degrees=True)  # Rotate 90 degrees
-        new_orientation = rotation.apply([current_pose.pose.orientation.x, current_pose.pose.orientation.y, current_pose.pose.orientation.z])
-        current_pose.pose.orientation.x = new_orientation[0]
-        current_pose.pose.orientation.y = new_orientation[1]
-        current_pose.pose.orientation.z = new_orientation[2]
-        self.arm_wrapper_node.pose_callback(current_pose)
-
-    def lower_arm(self):
-        # Lower the arm to drop the object
-        self.get_logger().info("Lowering the arm to drop the object.")
-        lowered_pose = PoseStamped()
-        lowered_pose.pose = self.arm_wrapper_node.get_current_pose()
-        lowered_pose.pose.position.z -= 0.1  # Lower 10 cm (adjust as needed)
-        self.arm_wrapper_node.pose_callback(lowered_pose)
-
-    def release_object(self):
-        # Open the gripper to release the object
-        self.get_logger().info("Releasing the object by opening the gripper.")
-        self.arm_wrapper_node.gripper_callback(Bool(data=True))  # Assuming opening gripper means True
-    
-    # def pick_and_place(self, object_pose):
-    #     """
-    #     Execute a complete pick and place operation
-        
-    #     Args:
-    #         object_pose: PoseStamped containing object position
-    #     """
-    #     # First move to the pre-grasp position
-    #     self.get_logger().info(f"Moving to pre-grasp position")
-    #     # Implementation depends on your robot's arm control
-        
-    #     # Then grasp the object
-    #     self.get_logger().info(f"Closing gripper")
-    #     # Implementation to close gripper
-        
-    #     # Lift the object
-    #     self.get_logger().info(f"Lifting object")
-    #     # Implementation to lift arm
-        
-    #     # Move to destination (this would come from the task manager)
-    #     self.get_logger().info(f"Moving to destination")
-    #     # Implementation to move arm to destination
-        
-    #     # Place the object
-    #     self.get_logger().info(f"Releasing object")
-    #     # Implementation to open gripper
-        
-    #     # Return to home position
-    #     self.get_logger().info(f"Returning to home position")
-    #     # Implementation to move arm to home
 
 
 def main():
