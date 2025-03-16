@@ -181,14 +181,6 @@ class TaskQueueManager(Node):
                     self.task_queue.append({
                         'action': 'sort_objects',
                     })
-
-                elif task_type in ['find', 'pick', 'place']:
-                    # For simple tasks, just add the single action
-                    self.task_queue.append({
-                        'action': task_type,
-                        'object': obj,
-                        'color': color
-                    })
                 
                 self.get_logger().info(f'Task queue created with {len(self.task_queue)} actions')
                 self.publish_status(f'Created task queue with {len(self.task_queue)} actions')

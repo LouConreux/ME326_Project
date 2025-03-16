@@ -19,16 +19,16 @@ from pipeline_perception import PipelinePerception
 from pnp import get_object_pose
 
 # Path to JSON key file
-JSON_KEY_PATH = '/home/locobot/Desktop/ME326_Project/loulou_key.json'
+JSON_KEY_PATH = '/home/locobot/Group3/ME326_Project/loulou_key.json'
 
 class PerceptionNode(Node):
     def __init__(self):
         super().__init__('perception_node')
         self.get_logger().info('Starting perception node initialization...')
         
-        self.json_key_path = JSON_KEY_PATH
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.json_key_path
-        self.get_logger().info(f'Set Google credentials path to: {self.json_key_path}')
+        self.jason_key_path = JSON_KEY_PATH
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.jason_key_path
+        self.get_logger().info(f'Set Google credentials path to: {self.jason_key_path}')
         
         # Initialize perception pipeline
         self.get_logger().info('Initializing perception pipeline...')
@@ -57,25 +57,25 @@ class PerceptionNode(Node):
         self.get_logger().info('Creating subscribers...')
         self.rgb_sub = self.create_subscription(
             Image,
-            '/locobot/camera/color/image_raw',
+            '/locobot/camera/camera/color/image_raw',
             self.rgb_callback,
             10)
         
         self.depth_sub = self.create_subscription(
             Image,
-            '/locobot/camera/depth/image_rect_raw',
+            '/locobot/camera/camera/depth/image_rect_raw',
             self.depth_callback,
             10)
             
         self.rgb_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera/color/camera_info',
+            '/locobot/camera/camera/color/camera_info',
             self.rgb_info_callback,
             10)
         
         self.depth_info_sub = self.create_subscription(
             CameraInfo,
-            '/locobot/camera/depth/camera_info',
+            '/locobot/camera/camera/depth/camera_info',
             self.depth_info_callback,
             10)
         
@@ -95,7 +95,7 @@ class PerceptionNode(Node):
         self.get_logger().info('Publishers created')
             
         # Store the latest prompt
-        self.current_prompt = "Banana"
+        self.current_prompt = "Red Cube"
         self.current_audio = None
         self.get_logger().info(f'Prompt initialized to: {self.current_prompt}')
 
@@ -142,7 +142,7 @@ class PerceptionNode(Node):
     def prompt_callback(self, msg):
         self.get_logger().info(f'Received prompt message: {msg.data}')
         if msg.data == 'None':
-            self.current_prompt = "Banana"
+            self.current_prompt = "Red Cube"
             return
         else:
             self.current_prompt = msg.data
@@ -151,7 +151,7 @@ class PerceptionNode(Node):
         
     def process_images(self):
         """Process RGB and depth images when both are available"""
-        time.sleep(0.5)
+        # time.sleep(1)
         self.get_logger().debug('Starting image processing')
         
         # Check if we have all required data
@@ -201,7 +201,6 @@ class PerceptionNode(Node):
                 
             image_bytes = img_encoded.tobytes()
             self.get_logger().debug('Image conversion complete')
-            
 
             # Detect object in RGB image
             self.get_logger().debug(f'Detecting object: {self.current_prompt}')
@@ -216,6 +215,17 @@ class PerceptionNode(Node):
             else:
                 self.get_logger().info(f'Found object {self.current_prompt} at {(x, y)} pixel coordinates')
             
+            # # Get object color
+            # self.get_logger().info('Getting object color...')
+            # object_color = self.pipeline.detector.get_object_color(
+            #     image_bytes=image_bytes,
+            #     object_name=self.current_prompt
+            # )
+            # if object_color is None:
+            #     self.get_logger().info('Object color not found')
+            # else:
+            #     self.get_logger().info(f'Object {self.current_prompt} is {object_color}')
+
             #make sure coordinates are within image bounds
             h,w = aligned_depth.shape[:2]
             x = max(0, min(w-1, x))

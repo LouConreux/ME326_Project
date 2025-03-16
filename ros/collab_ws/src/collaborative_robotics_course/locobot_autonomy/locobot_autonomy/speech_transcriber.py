@@ -2,7 +2,7 @@ import os
 import re
 from google.cloud import speech_v1p1beta1 as speech
 
-JSON_KEY_PATH = '/home/locobot/Desktop/ME326_Project/loulou_key.json'
+JSON_KEY_PATH = '/home/locobot/Group3/ME326_Project/loulou_key.json'
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = JSON_KEY_PATH
 
 class SpeechTranscriber:
@@ -18,7 +18,7 @@ class SpeechTranscriber:
 
         self.client = speech.SpeechClient()
 
-        # Define task types and their synonyms/patterns
+                # Define task types and their synonyms/patterns
         self.task_mapping = {
             # Object retrieval task
             'retrieve': [
