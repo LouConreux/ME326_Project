@@ -35,6 +35,16 @@
   <depend>image_transport</depend>
   <depend>cv_bridge</depend>
 
+  <exec_depend>tf2_ros_py</exec_depend>
+
+  <depend>python3-numpy</depend>
+  <depend>python3-scipy</depend>
+  <depend>python3-yaml</depend>
+  <exec_depend>python3-google-cloud-speech-pip</exec_depend>
+  <exec_depend>python3-google-cloud-vision-pip</exec_depend>
+  <exec_depend>python3-google-generativeai-pip</exec_depend>
+
+
   <depend>la_msgs</depend>	  
 
   <member_of_group>rosidl_interface_packages</member_of_group>
