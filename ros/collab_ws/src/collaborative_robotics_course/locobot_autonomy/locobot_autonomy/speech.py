@@ -14,9 +14,8 @@ import os
 import sounddevice as sd
 import wave
 from google.cloud import speech_v1p1beta1 as speech
-import time
 
-from speech_transcriber import SpeechTranscriber
+from audio.speech_transcriber import SpeechTranscriber
 
 class SpeechProcessorNode(Node):
     """ROS node that captures audio, transcribes it, and parses commands."""

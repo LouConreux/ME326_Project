@@ -1,6 +1,6 @@
-from speech_transcriber import SpeechTranscriber
 import sys
-sys.path.append("/home/locobot/Group3/ME326_Project/ros/collab_ws/src/collaborative_robotics_course/locobot_autonomy/locobot_autonomy")
+sys.path.append("/home/locobot/Group3/ME326_Project/ros/collab_ws/src/collaborative_robotics_course/locobot_autonomy/locobot_autonomy/")
+from audio.speech_transcriber import SpeechTranscriber
 from generate_prompt import GeminiClass
 from vision_detection import VisionObjectDetector
 

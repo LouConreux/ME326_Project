@@ -14,7 +14,7 @@ from camera_utils import align_depth
 import json
 
 # Import your existing components
-from pipeline_perception import PipelinePerception
+from vision.pipeline_perception import PipelinePerception
 
 # Path to JSON key file
 JSON_KEY_PATH = '/home/locobot/Group3/ME326_Project/loulou_key.json'
