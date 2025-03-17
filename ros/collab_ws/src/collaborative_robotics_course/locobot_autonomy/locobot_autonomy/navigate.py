@@ -8,14 +8,12 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
 
-import geometry_msgs
 from geometry_msgs.msg import Pose
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from visualization_msgs.msg import Marker
 
 # odom from gazebo is "best effort", so this is needed for the subscriber
-from rclpy.qos import qos_profile_sensor_data, QoSProfile 
+from rclpy.qos import qos_profile_sensor_data 
 
 import numpy as np
 
@@ -34,36 +32,19 @@ class Navigation(Node):
         #set the initial target pose to no value, and have the boolean demonstrate that the target position is not reached
         self.target_pose_reached_bool = False
         self.target_pose = None
-
-        # Set the target pose to (10, 10, 10) - we don't switch between points now
-        
-        # target_pose = Pose()
-        # target_pose.position.x = 3.0
-        # target_pose.position.y = 0.0
-        # target_pose.position.z = 0.0
-        # self.target_pose = target_pose
-
-        # Initialize locobot
-        # self.bot = InterbotixLocobotXS(
-        # robot_model='locobot_wx250s',
-        # robot_name='locobot',
-        # arm_model='mobile_wx250s'
-        # )
+        self.max_linear_velocity = 0.2 # m/s
+        self.max_angular_velocity = 0.2 # rad/s
         
         # Define the publishers, including "Twist" for moving the base, and "Bool" for determining if the robot is at the goal pose
         self.mobile_base_vel_publisher = self.create_publisher(
             Twist, 
             "/locobot/diffdrive_controller/cmd_vel_unstamped",
-             1)
+            1)
         
         self.goal_reached_publisher = self.create_publisher(
             Bool, 
             "/robot_at_goal", 
             10)
-
-
-        # **************ros2 topic pub /goal_pose geometry_msgs/msg/Pose '{position: {x: 1.0, y: 2.0, z: 3.0}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}'
-        #self.target_pose_visual = self.create_publisher(Marker, "/locobot/mobile_base/target_pose_visual", 1)
 
         # Define the subscribers, including "Pose" to get the goal pose, and "Odometry" to get the instantaneous pose of the robot
         self.pose_sub = self.create_subscription(
@@ -84,13 +65,10 @@ class Navigation(Node):
         #set targets for when a goal is reached: 
         self.goal_reached_error = 0.05
         self.integrated_error = np.matrix([[0],[0]]) #this is the integrated error for Proportional, Integral (PI) control
-        # self.integrated_error_factor = 1.0 #multiply this by accumulated error, this is the Ki (integrated error) gain
         self.integrated_error_list = []
         self.length_of_integrated_error_list = 20
         self.t_init = self.get_clock().now()
         self.prev_err = np.array([[0],[0]])
-        
-
 
 
     def position_callback(self, msg):
@@ -100,18 +78,19 @@ class Navigation(Node):
         self.get_logger().info(f'Orientation -> x: {msg.orientation.x}, y: {msg.orientation.y}, z: {msg.orientation.z}, w: {msg.orientation.w}')
 
         self.target_pose.position.x = msg.position.x - 0.2
-        self.target_pose.position.y = msg.position.y - 0.2
+        self.target_pose.position.y = msg.position.y
         self.target_pose.position.z = msg.position.z
 
 
-
     def odom_mobile_base_callback(self, data):
-
 
         if self.target_pose is None:
             self.get_logger().warn("No target set yet. Waiting for target...")
             return
 
+        if self.target_pose_reached_bool:
+            return
+            
         # Extract position and orientation from the Odometry data
         x_data = data.pose.pose.position.x
         y_data = data.pose.pose.position.y
@@ -140,7 +119,7 @@ class Navigation(Node):
 
         error_vect = np.matrix([[err_x], [err_y]])
 
-        Kp_mat = 1.2 * np.eye(2)
+        Kp_mat = np.array([[1.2, 0], [0, 0.2]])
         Ki_mat = 0.2 * np.eye(2)
         Kd_mat = 0.5 * np.eye(2)
 
@@ -177,13 +156,11 @@ class Navigation(Node):
         non_holonomic_mat = np.matrix([[np.cos(current_angle), -self.L*np.sin(current_angle)],[np.sin(current_angle),self.L*np.cos(current_angle)]])
         #Now perform inversion to find the forward velocity and angular velcoity of the mobile base.
         control_input = np.linalg.inv(non_holonomic_mat)*point_p_error_signal #note: this matrix can always be inverted because the angle is L
-   
-
 
         # Control message to command velocities
         control_msg = Twist()
-        control_msg.linear.x = float(control_input.item(0))
-        control_msg.angular.z = float(control_input.item(1))
+        control_msg.linear.x = float(min(control_input.item(0), self.max_linear_velocity))
+        control_msg.angular.z = float(min(control_input.item(1), self.max_angular_velocity))
 
         self.mobile_base_vel_publisher.publish(control_msg)
 
@@ -195,6 +172,7 @@ class Navigation(Node):
             control_msg.linear.x = 0.0
             control_msg.angular.z = 0.0
             self.mobile_base_vel_publisher.publish(control_msg)
+            self.target_pose_reached_bool = True
 
             # Notify manipulation node
             goal_msg = Bool()

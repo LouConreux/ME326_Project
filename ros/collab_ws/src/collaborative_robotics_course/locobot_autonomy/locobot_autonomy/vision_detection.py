@@ -117,12 +117,19 @@ class VisionObjectDetector:
                 min_x, max_x = max(0, min(x_coords)), min(width, max(x_coords))
                 min_y, max_y = max(0, min(y_coords)), min(height, max(y_coords))
 
-                obj_region = hsv_image[min_y:max_y, min_x:max_x]
+                obj_region = image_np[min_y:max_y, min_x:max_x]
+                hsv_region = hsv_image[min_y:max_y, min_x:max_x]
                 
                 if obj_region.size == 0:
                     continue
                 
-                avg_hsv = np.mean(obj_region, axis=(0, 1))
+                # Apply Otsu's thresholding to create a mask for refining HSV average
+                gray_region = cv2.cvtColor(obj_region, cv2.COLOR_RGB2GRAY)
+                _, mask = cv2.threshold(gray_region, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                if mask.sum() == 0:
+                    continue
+                masked_hsv = cv2.bitwise_and(hsv_region, hsv_region, mask=mask)
+                avg_hsv = np.sum(masked_hsv, axis=(0, 1)) / np.sum(mask)
             
                 # Determine the dominant color
                 dominant_color = None

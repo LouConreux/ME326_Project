@@ -5,7 +5,6 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Bool
-from interbotix_xs_modules.xs_robot.locobot import InterbotixLocobotXS
 from scipy.spatial.transform import Rotation as R
 import sys
 sys.path.append("/home/locobot/Desktop/ME326_Project/ros/collab_ws/src/locobot_wrapper/scripts")

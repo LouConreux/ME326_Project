@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data, QoSProfile 
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
@@ -10,13 +9,12 @@ import cv2
 import numpy as np
 import tf2_ros
 import os
-from tf2_geometry_msgs import do_transform_pose, do_transform_pose_stamped
+from tf2_geometry_msgs import do_transform_pose_stamped
 from camera_utils import align_depth
 import time
 
 # Import your existing components
 from pipeline_perception import PipelinePerception
-from pnp import get_object_pose
 
 # Path to JSON key file
 JSON_KEY_PATH = '/home/locobot/Group3/ME326_Project/loulou_key.json'
@@ -141,17 +139,12 @@ class PerceptionNode(Node):
         
     def prompt_callback(self, msg):
         self.get_logger().info(f'Received prompt message: {msg.data}')
-        if msg.data == 'None':
-            self.current_prompt = "Red Cube"
-            return
-        else:
-            self.current_prompt = msg.data
-            self.get_logger().info(f'Set current prompt to: {self.current_prompt}')
-            return
+        self.current_prompt = msg.data
+        self.get_logger().info(f'Set current prompt to: {self.current_prompt}')
+        return
         
     def process_images(self):
         """Process RGB and depth images when both are available"""
-        # time.sleep(1)
         self.get_logger().debug('Starting image processing')
         
         # Check if we have all required data
@@ -215,17 +208,6 @@ class PerceptionNode(Node):
             else:
                 self.get_logger().info(f'Found object {self.current_prompt} at {(x, y)} pixel coordinates')
             
-            # # Get object color
-            # self.get_logger().info('Getting object color...')
-            # object_color = self.pipeline.detector.get_object_color(
-            #     image_bytes=image_bytes,
-            #     object_name=self.current_prompt
-            # )
-            # if object_color is None:
-            #     self.get_logger().info('Object color not found')
-            # else:
-            #     self.get_logger().info(f'Object {self.current_prompt} is {object_color}')
-
             #make sure coordinates are within image bounds
             h,w = aligned_depth.shape[:2]
             x = max(0, min(w-1, x))
