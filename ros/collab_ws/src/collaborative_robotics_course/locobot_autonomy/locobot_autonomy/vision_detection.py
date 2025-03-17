@@ -75,12 +75,13 @@ class VisionObjectDetector:
 
         return pil_image
     
-    def get_object_color(self, image_bytes, object_name):
+    def get_object_color(self, image_bytes, desired_color):
         """
-        Returns the dominant color of the object in the image.
+        Returns the object name of the desired color in the image.
 
         :param image_bytes: The raw bytes of the image.
-        :return: A list of detected objects with their associated color.
+        :param desired_color: The desired color to search for (e.g., "red", "blue").
+        :return: The object name of the desired color in the image.
         """
 
         color_categories = ["red", "orange", "yellow", "green", "light blue", "dark blue", "purple"]
@@ -106,58 +107,58 @@ class VisionObjectDetector:
         image_np = np.array(pil_image)
         hsv_image = cv2.cvtColor(image_np, cv2.COLOR_RGB2HSV)
 
-
+        object_name = None
         for obj in objects:
-            if object_name.lower() in obj.name.lower():
-                vertices = obj.bounding_poly.normalized_vertices
+            vertices = obj.bounding_poly.normalized_vertices
 
-                x_coords = [int(vertex.x * width) for vertex in vertices]
-                y_coords = [int(vertex.y * height) for vertex in vertices]
-                
-                min_x, max_x = max(0, min(x_coords)), min(width, max(x_coords))
-                min_y, max_y = max(0, min(y_coords)), min(height, max(y_coords))
-
-                obj_region = image_np[min_y:max_y, min_x:max_x]
-                hsv_region = hsv_image[min_y:max_y, min_x:max_x]
-                
-                if obj_region.size == 0:
-                    continue
-                
-                # Apply Otsu's thresholding to create a mask for refining HSV average
-                gray_region = cv2.cvtColor(obj_region, cv2.COLOR_RGB2GRAY)
-                _, mask = cv2.threshold(gray_region, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                if mask.sum() == 0:
-                    continue
-                masked_hsv = cv2.bitwise_and(hsv_region, hsv_region, mask=mask)
-                avg_hsv = np.sum(masked_hsv, axis=(0, 1)) / np.sum(mask)
+            x_coords = [int(vertex.x * width) for vertex in vertices]
+            y_coords = [int(vertex.y * height) for vertex in vertices]
             
-                # Determine the dominant color
-                dominant_color = None
-                for color, ranges in color_ranges.items():
-                    for (lower, upper) in ranges:
-                        lower = np.array(lower)
-                        upper = np.array(upper)
-                        
-                        if all(lower <= avg_hsv) and all(avg_hsv <= upper):
-                            dominant_color = color
-                            break
+            min_x, max_x = max(0, min(x_coords)), min(width, max(x_coords))
+            min_y, max_y = max(0, min(y_coords)), min(height, max(y_coords))
+
+            obj_region = image_np[min_y:max_y, min_x:max_x]
+            hsv_region = hsv_image[min_y:max_y, min_x:max_x]
+            
+            if obj_region.size == 0:
+                continue
+            
+            # Apply Otsu's thresholding to create a mask for refining HSV average
+            gray_region = cv2.cvtColor(obj_region, cv2.COLOR_RGB2GRAY)
+            _, mask = cv2.threshold(gray_region, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            if mask.sum() == 0:
+                continue
+            masked_hsv = cv2.bitwise_and(hsv_region, hsv_region, mask=mask)
+            avg_hsv = np.sum(masked_hsv, axis=(0, 1)) / np.sum(mask)
+        
+            # Determine the dominant color
+            dominant_color = None
+            for color, ranges in color_ranges.items():
+                for (lower, upper) in ranges:
+                    lower = np.array(lower)
+                    upper = np.array(upper)
                     
-                    if dominant_color:
+                    if all(lower <= avg_hsv) and all(avg_hsv <= upper):
+                        dominant_color = color
                         break
                 
-                # If no dominant color is found, choose the closest one
-                if not dominant_color:
-                    hue = avg_hsv[0]
-                    min_distance = 180  # Maximum possible hue distance
-                    
-                    for color in color_categories:
-                        for (lower, upper) in color_ranges[color]:
-                            middle_hue = (lower[0] + upper[0]) / 2
-                            distance = min(abs(hue - middle_hue), 180 - abs(hue - middle_hue))
-                            
-                            if distance < min_distance:
-                                min_distance = distance
-                                dominant_color = color
-            bounding_box = [min_x, min_y, max_x, max_y]
-            return dominant_color, bounding_box
+                if dominant_color:
+                    break
+            
+            # If no dominant color is found, choose the closest one
+            if not dominant_color:
+                hue = avg_hsv[0]
+                min_distance = 180  # Maximum possible hue distance
+                
+                for color in color_categories:
+                    for (lower, upper) in color_ranges[color]:
+                        middle_hue = (lower[0] + upper[0]) / 2
+                        distance = min(abs(hue - middle_hue), 180 - abs(hue - middle_hue))
+                        
+                        if distance < min_distance:
+                            min_distance = distance
+                            dominant_color = color
+            if dominant_color == desired_color.lower():
+                object_name = obj.name
+            return object_name
 

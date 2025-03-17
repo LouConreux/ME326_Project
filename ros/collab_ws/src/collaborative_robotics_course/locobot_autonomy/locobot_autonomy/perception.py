@@ -11,7 +11,7 @@ import tf2_ros
 import os
 from tf2_geometry_msgs import do_transform_pose_stamped
 from camera_utils import align_depth
-import time
+import json
 
 # Import your existing components
 from pipeline_perception import PipelinePerception
@@ -42,6 +42,9 @@ class PerceptionNode(Node):
 
         self.latest_rgb = None
         self.latest_depth = None
+
+        # Initialize command type
+        self.command_type = None
 
         self.cam2cam_transform = np.eye(4) ### to change
         
@@ -79,7 +82,7 @@ class PerceptionNode(Node):
         
         self.prompt_sub = self.create_subscription(
             String,
-            '/speech/target_object',
+            '/speech/parsed_command',
             self.prompt_callback,
             10)
         self.get_logger().info('All subscribers created')
@@ -138,9 +141,24 @@ class PerceptionNode(Node):
             self.get_logger().error(f'Error in depth callback: {str(e)}')
         
     def prompt_callback(self, msg):
-        self.get_logger().info(f'Received prompt message: {msg.data}')
-        self.current_prompt = msg.data
-        self.get_logger().info(f'Set current prompt to: {self.current_prompt}')
+        try:
+            command = json.loads(msg.data)
+            self.get_logger().info(f'Received command: {command}')
+            
+            obj = command.get('object')
+            color = command.get('color')
+            if obj is not None:
+                self.current_prompt = obj
+                self.command_type = 'object'
+                self.get_logger().info(f'Updated prompt to: {self.current_prompt}')
+            elif color is not None:
+                self.current_prompt = color
+                self.command_type = 'color'
+                self.get_logger().info(f'Updated prompt to: {self.current_prompt}')
+        except Exception as e:
+            self.get_logger().error(f'Error processing command: {str(e)}')
+            self.current_prompt = None
+            self.command_type = None
         return
         
     def process_images(self):
@@ -194,6 +212,16 @@ class PerceptionNode(Node):
                 
             image_bytes = img_encoded.tobytes()
             self.get_logger().debug('Image conversion complete')
+
+            if self.command_type == 'color':
+                self.get_logger().debug(f'Detecting color {self.current_prompt} first...')
+                object_name = self.perceptor.detector.get_object_color(image_bytes, self.current_prompt)
+                if object_name is None:
+                    self.get_logger().info(f'No objects of Color {self.current_prompt} found in image')
+                    return
+                else:
+                    self.get_logger().info(f'Found object {object_name} of color {self.current_prompt} in image')
+                    self.current_prompt = object_name
 
             # Detect object in RGB image
             self.get_logger().debug(f'Detecting object: {self.current_prompt}')
